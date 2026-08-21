@@ -20,7 +20,8 @@ export type Category =
   | "footwear"
   | "accessories"
   | "hoodies"
-  | "joggers";
+  | "joggers"
+  | "longsleeves";
 
 export interface CartItem {
   product: Product;

@@ -4,7 +4,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
   {
     id: "1",
     name: "Classic White Tee",
-    price: 3500,
+    price: 4000,
     category: "tops",
     image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&q=80",
     description: "Premium cotton crew-neck tee, perfect for campus life.",
@@ -17,7 +17,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
   {
     id: "2",
     name: "Baggy Cargo Jeans",
-    price: 8500,
+    price: 9000,
     category: "bottoms",
     image: "https://images.unsplash.com/photo-1542272604-787c3835535d?w=400&q=80",
     description: "Relaxed-fit cargo jeans with multiple pockets.",
@@ -32,8 +32,8 @@ export const SAMPLE_PRODUCTS: Product[] = [
     name: "Campus Hoodie",
     price: 6500,
     category: "hoodies",
-    image: "https://images.unsplash.com/photo-1556821840-3a63f15732ce?w=400&q=80",
-    description: "Cozy fleece hoodie for cool FUNAAB evenings.",
+    image: "https://images.unsplash.com/photo-1509942774463-acf339cf87d5?w=400&q=80",
+    description: "Cozy hoodie for cool FUNAAB evenings.",
     sizes: ["S", "M", "L", "XL", "XXL"],
     colors: ["Black", "Navy", "Brown"],
     inStock: true,
@@ -131,6 +131,19 @@ export const SAMPLE_PRODUCTS: Product[] = [
     featured: false,
     createdAt: new Date().toISOString(),
   },
+  {
+    id: "11",
+    name: "Thermal Long Sleeve",
+    price: 4500,
+    category: "longsleeves",
+    image: "https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=400&q=80",
+    description: "Slim-fit long-sleeve thermal top, great for layering.",
+    sizes: ["XS", "S", "M", "L", "XL"],
+    colors: ["White", "Black", "Cream"],
+    inStock: true,
+    featured: false,
+    createdAt: new Date().toISOString(),
+  },
 ];
 
 export const CATEGORIES: { id: Category; label: string; description: string }[] = [
@@ -139,6 +152,7 @@ export const CATEGORIES: { id: Category; label: string; description: string }[] 
   { id: "dresses", label: "Dresses", description: "Casual & formal dresses" },
   { id: "outerwear", label: "Outerwear", description: "Jackets & coats" },
   { id: "hoodies", label: "Hoodies", description: "Sweatshirts & hoodies" },
+  { id: "longsleeves", label: "Long Sleeves", description: "Thermals & long tops" },
   { id: "joggers", label: "Joggers", description: "Sweatpants & joggers" },
   { id: "footwear", label: "Footwear", description: "Sneakers & shoes" },
   { id: "accessories", label: "Accessories", description: "Bags, jewelry & more" },
@@ -147,11 +161,14 @@ export const CATEGORIES: { id: Category; label: string; description: string }[] 
 export function getProductsFromStorage(): Product[] {
   if (typeof window === "undefined") return SAMPLE_PRODUCTS;
   try {
-    const stored = localStorage.getItem("soc_products");
+    // v2 — clears any stale v1 cache
+    const stored = localStorage.getItem("soc_products_v2");
     if (stored) {
       const parsed = JSON.parse(stored) as Product[];
       return parsed.length > 0 ? parsed : SAMPLE_PRODUCTS;
     }
+    // Remove old key if present
+    localStorage.removeItem("soc_products");
   } catch {
     // ignore
   }
@@ -160,7 +177,7 @@ export function getProductsFromStorage(): Product[] {
 
 export function saveProductsToStorage(products: Product[]): void {
   if (typeof window === "undefined") return;
-  localStorage.setItem("soc_products", JSON.stringify(products));
+  localStorage.setItem("soc_products_v2", JSON.stringify(products));
 }
 
 export function formatPrice(price: number): string {
