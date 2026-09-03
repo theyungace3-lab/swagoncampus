@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { CartProvider } from "@/contexts/CartContext";
 import { ProductsProvider } from "@/contexts/ProductsContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { CartDrawer } from "@/components/CartDrawer";
@@ -37,16 +38,18 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-screen flex flex-col" style={{ background: "var(--bg-primary)" }}>
         <ThemeProvider>
-          <ProductsProvider>
-            <CartProvider>
-              <Navbar />
-              <main className="flex-1 pt-16">
-                {children}
-              </main>
-              <Footer />
-              <CartDrawer />
-            </CartProvider>
-          </ProductsProvider>
+          <AuthProvider>
+            <ProductsProvider>
+              <CartProvider>
+                <Navbar />
+                <main className="flex-1 pt-16">
+                  {children}
+                </main>
+                <Footer />
+                <CartDrawer />
+              </CartProvider>
+            </ProductsProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
