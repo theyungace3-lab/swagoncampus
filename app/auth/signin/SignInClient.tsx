@@ -30,8 +30,9 @@ export function SignInClient() {
       setLoading(false);
       return;
     }
-    router.push(redirect);
-    router.refresh();
+
+    // Hard redirect so proxy/server reads the fresh session cookie
+    window.location.href = redirect;
   }
 
   return (
