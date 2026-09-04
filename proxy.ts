@@ -6,6 +6,7 @@ export async function proxy(request: NextRequest) {
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
   const configured  = supabaseUrl.startsWith("https://") && supabaseKey.length > 20;
 
+  // ── Not configured yet — just protect /admin ─────────────
   if (!configured) {
     if (request.nextUrl.pathname.startsWith("/admin")) {
       const url = request.nextUrl.clone();
@@ -16,12 +17,11 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next({ request });
   }
 
-  // Build the response first — IMPORTANT: must pass the same response
-  // object into setAll so cookies are written onto it correctly
-  const response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
+  // ── Main session refresh logic ────────────────────────────
+  // Per Supabase SSR docs: create the response first, pass it
+  // to setAll so cookies are written on the *same* object.
+  let response = NextResponse.next({
+    request,
   });
 
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
@@ -30,20 +30,27 @@ export async function proxy(request: NextRequest) {
         return request.cookies.getAll();
       },
       setAll(cookiesToSet) {
-        // Write onto both the request (for downstream) and the response (for browser)
-        cookiesToSet.forEach(({ name, value, options }) => {
-          request.cookies.set(name, value);
-          response.cookies.set(name, value, options);
-        });
+        // 1. Set on the mutated request so downstream code sees them
+        cookiesToSet.forEach(({ name, value }) =>
+          request.cookies.set(name, value)
+        );
+        // 2. Re-create the response with the updated request
+        response = NextResponse.next({ request });
+        // 3. Set on the response so the browser stores them
+        cookiesToSet.forEach(({ name, value, options }) =>
+          response.cookies.set(name, value, options)
+        );
       },
     },
   });
 
-  // IMPORTANT: always call getUser() — this refreshes the session token
-  // and writes updated cookies. Never skip this.
-  const { data: { user } } = await supabase.auth.getUser();
+  // Calling getUser() is required — it refreshes the access token
+  // and triggers setAll above so cookies stay valid
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  // Protect /admin — redirect to sign-in if not the admin email
+  // ── Protect /admin ────────────────────────────────────────
   if (request.nextUrl.pathname.startsWith("/admin")) {
     const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "";
     if (!user || user.email !== adminEmail) {
@@ -59,6 +66,12 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    /*
+     * Match all request paths EXCEPT:
+     * - _next/static (static files)
+     * - _next/image (image optimisation)
+     * - favicon.ico, and static asset extensions
+     */
+    "/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
