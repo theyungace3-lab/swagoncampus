@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { AdminClient } from "./AdminClient";
 
 export const metadata: Metadata = {
-  title: "Admin Panel",
-  description: "SwagOnCampus admin panel — manage products",
+  title: "Admin Panel — SwagOnCampus",
   robots: { index: false, follow: false },
 };
 

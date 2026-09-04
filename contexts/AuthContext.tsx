@@ -1,7 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useRef } from "react";
-import type { User, Session, SupabaseClient } from "@supabase/supabase-js";
+import React, { createContext, useContext, useEffect, useState } from "react";
+import type { User, Session } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import type { DbProfile } from "@/lib/supabase/types";
 
@@ -17,20 +17,7 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-function isSupabaseConfigured() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
-  return url.startsWith("https://") && key.length > 20;
-}
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // Single stable client instance — never recreated
-  const clientRef = useRef<SupabaseClient | null>(null);
-  function getClient() {
-    if (!clientRef.current) clientRef.current = createClient();
-    return clientRef.current;
-  }
-
   const [user, setUser]       = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<DbProfile | null>(null);
@@ -40,9 +27,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isAdmin    = !!user && user.email === adminEmail;
 
   async function fetchProfile(userId: string) {
-    if (!isSupabaseConfigured()) return;
     try {
-      const { data } = await getClient()
+      const { data } = await createClient()
         .from("profiles")
         .select("*")
         .eq("id", userId)
@@ -56,14 +42,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
-    if (!isSupabaseConfigured()) {
-      setLoading(false);
-      return;
-    }
+    const supabase = createClient();
 
-    const supabase = getClient();
-
-    // Get initial session from cookie storage
+    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -71,9 +52,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
-    // Subscribe to auth state changes
+    // Listen for ALL auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
+        console.log("[Auth]", event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) fetchProfile(session.user.id);
@@ -87,8 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   async function signOut() {
-    if (!isSupabaseConfigured()) return;
-    await getClient().auth.signOut();
+    await createClient().auth.signOut();
     window.location.href = "/";
   }
 
