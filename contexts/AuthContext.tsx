@@ -1,7 +1,11 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
-import type { User, Session } from "@supabase/supabase-js";
+import React, {
+  createContext, useContext, useEffect, useState, useCallback
+} from "react";
+import type {
+  User, Session, AuthChangeEvent
+} from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import type { DbProfile } from "@/lib/supabase/types";
 
@@ -26,7 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "";
   const isAdmin    = !!user && user.email === adminEmail;
 
-  async function fetchProfile(userId: string) {
+  const fetchProfile = useCallback(async (userId: string) => {
     try {
       const { data } = await createClient()
         .from("profiles")
@@ -35,43 +39,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
       setProfile(data ?? null);
     } catch { /* ignore */ }
-  }
+  }, []);
 
-  async function refreshProfile() {
+  const refreshProfile = useCallback(async () => {
     if (user) await fetchProfile(user.id);
-  }
+  }, [user, fetchProfile]);
 
   useEffect(() => {
-    const supabase = createClient();
+    // Get existing session on mount
+    createClient().auth.getSession().then(
+      ({ data: { session: s } }: { data: { session: Session | null } }) => {
+        setSession(s);
+        setUser(s?.user ?? null);
+        if (s?.user) fetchProfile(s.user.id);
+        setLoading(false);
+      }
+    );
 
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }: { data: { session: import("@supabase/supabase-js").Session | null } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
-      setLoading(false);
-    });
+    // Single persistent listener — the singleton client ensures
+    // this only ever fires once and stays alive across navigations
+    const { data: { subscription } } = createClient().auth.onAuthStateChange(
+      (event: AuthChangeEvent, s: Session | null) => {
+        // Ignore INITIAL_SESSION — we handle it above via getSession
+        if (event === "INITIAL_SESSION") return;
 
-    // Listen for ALL auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event: string, session: import("@supabase/supabase-js").Session | null) => {
-        console.log("[Auth]", event, session?.user?.email);
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) fetchProfile(session.user.id);
-        else setProfile(null);
+        setSession(s);
+        setUser(s?.user ?? null);
+
+        if (s?.user) {
+          fetchProfile(s.user.id);
+        } else {
+          setProfile(null);
+        }
         setLoading(false);
       }
     );
 
     return () => subscription.unsubscribe();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchProfile]); // stable — fetchProfile is useCallback
 
-  async function signOut() {
+  const signOut = useCallback(async () => {
     await createClient().auth.signOut();
     window.location.href = "/";
-  }
+  }, []);
 
   return (
     <AuthContext.Provider
