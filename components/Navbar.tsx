@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { ShoppingCart, Sun, Moon, Menu, X, Sparkles, User, LogOut, ChevronDown } from "lucide-react";
+import { ShoppingCart, Sun, Moon, Menu, X, ShoppingBag, ShieldCheck, User, LogOut, ChevronDown } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 
 export function Navbar() {
@@ -44,7 +44,7 @@ export function Navbar() {
     { href: "/", label: "Home" },
     { href: "/shop", label: "Shop" },
     { href: "/shop?category=tops", label: "Tops" },
-    { href: "/shop?category=bottoms", label: "Bottoms" },
+    { href: "/shop?category=footwear", label: "Footwear" },
   ];
 
   const isActive = (href: string) => {
@@ -70,7 +70,7 @@ export function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group" aria-label="SwagOnCampus Home">
-            <Sparkles className="w-6 h-6 transition-transform group-hover:rotate-12 group-hover:scale-110" style={{ color: "var(--gold-primary)" }} />
+            <ShoppingBag className="w-6 h-6 transition-transform duration-300 group-hover:rotate-6 group-hover:scale-110" style={{ color: "var(--gold-primary)" }} />
             <span className="text-xl font-black tracking-tight gold-text hidden sm:block">SwagOnCampus</span>
             <span className="text-xl font-black tracking-tight gold-text sm:hidden">SOC</span>
           </Link>
@@ -165,7 +165,7 @@ export function Navbar() {
                           <Link href="/admin" onClick={() => setUserMenuOpen(false)}
                             className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold hover:bg-[rgba(201,146,42,0.08)] transition-colors"
                             style={{ color: "var(--gold-primary)" }}>
-                            <Sparkles className="w-4 h-4" /> Admin Panel
+                            <ShieldCheck className="w-4 h-4" /> Admin Panel
                           </Link>
                         )}
                         <button onClick={handleSignOut}
@@ -225,7 +225,7 @@ export function Navbar() {
                     <Link href="/admin" onClick={() => setMenuOpen(false)}
                       className="px-4 py-3 rounded-xl text-sm font-semibold hover:bg-[rgba(201,146,42,0.08)] transition-all flex items-center gap-2"
                       style={{ color: "var(--gold-primary)" }}>
-                      <Sparkles className="w-4 h-4" /> Admin Panel
+                      <ShieldCheck className="w-4 h-4" /> Admin Panel
                     </Link>
                   )}
                   <button onClick={() => { handleSignOut(); setMenuOpen(false); }}

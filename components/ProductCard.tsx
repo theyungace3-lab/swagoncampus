@@ -6,7 +6,7 @@ import { useState } from "react";
 import { ShoppingCart, MessageCircle, Heart } from "lucide-react";
 import { Product } from "@/lib/types";
 import { useCart } from "@/contexts/CartContext";
-import { formatPrice } from "@/lib/products";
+import { formatPrice, getCategoryLabel } from "@/lib/products";
 
 interface ProductCardProps {
   product: Product;
@@ -21,7 +21,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const defaultColor = product.colors[0] ?? "Default";
 
   const whatsappMessage = encodeURIComponent(
-    `Hello, I'd like to place an order for: *${product.name}* — ${formatPrice(product.price)}`
+    `Hello, I'd like to place an order for: *${product.name}* (${formatPrice(product.price)})`
   );
   const whatsappUrl = `https://wa.me/2348185319037?text=${whatsappMessage}`;
 
@@ -41,7 +41,7 @@ export function ProductCard({ product }: ProductCardProps) {
   }
 
   return (
-    <article className="luxury-card group overflow-hidden flex flex-col">
+    <article className="luxury-card group overflow-hidden flex flex-col h-full">
       {/* Image */}
       <Link
         href={`/product/${product.id}`}
@@ -65,7 +65,7 @@ export function ProductCard({ product }: ProductCardProps) {
               className="text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide"
               style={{ background: "var(--gold-primary)", color: "#1a0e00" }}
             >
-              ✦ Featured
+              Featured
             </span>
           )}
           {!product.inStock && (
@@ -100,7 +100,7 @@ export function ProductCard({ product }: ProductCardProps) {
           className="text-[10px] font-semibold uppercase tracking-widest mb-1"
           style={{ color: "var(--gold-primary)" }}
         >
-          {product.category}
+          {getCategoryLabel(product.category)}
         </span>
 
         {/* Name */}

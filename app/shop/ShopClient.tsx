@@ -4,20 +4,23 @@ import { useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { SlidersHorizontal, X } from "lucide-react";
 import { ProductCard } from "@/components/ProductCard";
+import { Reveal } from "@/components/Reveal";
 import { useProducts } from "@/contexts/ProductsContext";
-import { CATEGORIES } from "@/lib/products";
+import { CATEGORIES, normalizeCategory } from "@/lib/products";
 import { Category } from "@/lib/types";
 
 const SORT_OPTIONS = [
   { value: "newest", label: "Newest" },
   { value: "price-asc", label: "Price: Low to High" },
   { value: "price-desc", label: "Price: High to Low" },
-  { value: "name-asc", label: "Name A–Z" },
+  { value: "name-asc", label: "Name A to Z" },
 ];
 
 export function ShopClient() {
   const searchParams = useSearchParams();
-  const initialCategory = (searchParams.get("category") ?? "all") as Category | "all";
+  const rawCategory = searchParams.get("category") ?? "all";
+  const initialCategory: Category | "all" =
+    rawCategory === "all" ? "all" : normalizeCategory(rawCategory);
 
   const { products } = useProducts();
   const [activeCategory, setActiveCategory] = useState<Category | "all">(initialCategory);
@@ -58,13 +61,14 @@ export function ShopClient() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       {/* Page Header */}
-      <div className="mb-8">
-        <p
-          className="text-xs font-bold uppercase tracking-widest mb-2"
-          style={{ color: "var(--gold-primary)" }}
-        >
-          ✦ Explore
-        </p>
+      <Reveal>
+        <div className="mb-8">
+          <p
+            className="text-xs font-bold uppercase tracking-widest mb-2"
+            style={{ color: "var(--gold-primary)" }}
+          >
+            Explore
+          </p>
         <h1
           className="text-4xl sm:text-5xl font-black"
           style={{ color: "var(--text-primary)" }}
@@ -74,7 +78,8 @@ export function ShopClient() {
         <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
           {filtered.length} item{filtered.length !== 1 ? "s" : ""}
         </p>
-      </div>
+        </div>
+      </Reveal>
 
       <hr className="gold-divider mb-8" />
 

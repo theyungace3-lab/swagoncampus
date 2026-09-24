@@ -17,11 +17,11 @@ const geist = Geist({
 
 export const metadata: Metadata = {
   title: {
-    default: "SwagOnCampus.... Campus Fashion for FUNAAB Students",
+    default: "SwagOnCampus | Campus Fashion for FUNAAB Students",
     template: "%s | SwagOnCampus",
   },
   description:
-    "Shop the freshest fits for FUNAAB students. Tops, bottoms, dresses, sneakers and more. Order instantly via WhatsApp.",
+    "Shop the freshest fits for FUNAAB students. Tops, jackets, hoodies, trousers, jeans, footwear, watches, accessories and corporate dresses. Order instantly via WhatsApp.",
   keywords: ["FUNAAB", "campus fashion", "student clothing", "Nigeria fashion", "SwagOnCampus"],
   openGraph: {
     siteName: "SwagOnCampus",

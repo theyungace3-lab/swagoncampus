@@ -11,6 +11,20 @@ This creates: `products`, `discounts`, `profiles`, `orders` tables + seeds sampl
 
 ---
 
+## Step 1b — Enable product image uploads (new)
+
+To upload product photos directly from the admin panel, run the contents of
+`supabase/storage.sql` in the Supabase **SQL Editor** as well. This creates a
+public `product-images` bucket. After that, the admin **Add / Edit Product**
+form has an upload box (click or drag & drop a photo). Pasting an image URL
+still works too.
+
+If your store already has products with the old categories (Bottoms, Outerwear,
+Hoodies, Joggers, Accessories, Dresses), you can optionally run
+`supabase/migrate-categories.sql` to re-map them to the new 6 categories.
+
+---
+
 ## Step 2 — Configure environment variables
 
 Open `.env.local` and fill in your real values:
@@ -83,5 +97,5 @@ protected by the `NEXT_PUBLIC_ADMIN_EMAIL` env var — only that email can acces
 
 Visit `https://swagoncampus.vercel.app/admin` → sign in with your admin email.
 
-- **Products tab** — add, edit, delete, toggle stock/featured
+- **Products tab** — add, edit, delete, toggle stock/featured. Upload product photos by clicking or dragging & dropping a file into the image box (or paste a direct image URL).
 - **Sales & Discounts tab** — create percentage or fixed discounts per product or site-wide

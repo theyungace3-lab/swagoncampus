@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { User, ShoppingBag, MapPin, Phone, LogOut, Sparkles } from "lucide-react";
+import { User, ShoppingBag, MapPin, Phone, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function AccountPage() {
@@ -31,7 +31,7 @@ export default function AccountPage() {
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div className="flex items-center gap-3 mb-8">
-        <Sparkles className="w-6 h-6" style={{ color: "var(--gold-primary)" }} />
+        <User className="w-6 h-6" style={{ color: "var(--gold-primary)" }} />
         <h1 className="text-3xl font-black gold-text">My Account</h1>
       </div>
 

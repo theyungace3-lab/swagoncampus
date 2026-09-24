@@ -18,9 +18,9 @@ export const SAMPLE_PRODUCTS: Product[] = [
     id: "2",
     name: "Baggy Cargo Jeans",
     price: 9000,
-    category: "bottoms",
+    category: "trousers-jeans",
     image: "https://images.unsplash.com/photo-1542272604-787c3835535d?w=400&q=80",
-    description: "Relaxed-fit cargo jeans with multiple pockets.",
+    description: "Relaxed fit cargo jeans with multiple pockets.",
     sizes: ["28", "30", "32", "34", "36"],
     colors: ["Blue", "Black", "Khaki"],
     inStock: true,
@@ -31,7 +31,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
     id: "3",
     name: "Campus Hoodie",
     price: 6500,
-    category: "hoodies",
+    category: "jackets-hoodies",
     image: "https://images.unsplash.com/photo-1509942774463-acf339cf87d5?w=400&q=80",
     description: "Cozy hoodie for cool FUNAAB evenings.",
     sizes: ["S", "M", "L", "XL", "XXL"],
@@ -44,7 +44,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
     id: "4",
     name: "Floral Midi Dress",
     price: 7200,
-    category: "dresses",
+    category: "corporate-dresses",
     image: "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=400&q=80",
     description: "Elegant floral midi dress for lectures and events.",
     sizes: ["XS", "S", "M", "L"],
@@ -57,7 +57,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
     id: "5",
     name: "Varsity Jacket",
     price: 12000,
-    category: "outerwear",
+    category: "jackets-hoodies",
     image: "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400&q=80",
     description: "Classic varsity jacket to flex on campus.",
     sizes: ["S", "M", "L", "XL"],
@@ -83,7 +83,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
     id: "7",
     name: "Jogger Sweatpants",
     price: 4800,
-    category: "joggers",
+    category: "trousers-jeans",
     image: "https://images.unsplash.com/photo-1571945153237-4929e783af4a?w=400&q=80",
     description: "Comfortable tapered joggers for everyday wear.",
     sizes: ["S", "M", "L", "XL"],
@@ -96,7 +96,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
     id: "8",
     name: "Gold Chain Necklace",
     price: 2500,
-    category: "accessories",
+    category: "watches-accessories",
     image: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400&q=80",
     description: "Stainless steel gold-plated chain necklace.",
     sizes: ["One Size"],
@@ -122,7 +122,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
     id: "10",
     name: "Biker Shorts",
     price: 3200,
-    category: "bottoms",
+    category: "trousers-jeans",
     image: "https://images.unsplash.com/photo-1594938298603-c8148c4b4d35?w=400&q=80",
     description: "Stretchy high-waist biker shorts.",
     sizes: ["XS", "S", "M", "L"],
@@ -135,9 +135,9 @@ export const SAMPLE_PRODUCTS: Product[] = [
     id: "11",
     name: "Thermal Long Sleeve",
     price: 4500,
-    category: "longsleeves",
+    category: "tops",
     image: "https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=400&q=80",
-    description: "Slim-fit long-sleeve thermal top, great for layering.",
+    description: "Slim fit long sleeve thermal top, great for layering.",
     sizes: ["XS", "S", "M", "L", "XL"],
     colors: ["White", "Black", "Cream"],
     inStock: true,
@@ -148,15 +148,55 @@ export const SAMPLE_PRODUCTS: Product[] = [
 
 export const CATEGORIES: { id: Category; label: string; description: string }[] = [
   { id: "tops", label: "Tops", description: "T-shirts, shirts & more" },
-  { id: "bottoms", label: "Bottoms", description: "Jeans, shorts & trousers" },
-  { id: "dresses", label: "Dresses", description: "Casual & formal dresses" },
-  { id: "outerwear", label: "Outerwear", description: "Jackets & coats" },
-  { id: "hoodies", label: "Hoodies", description: "Sweatshirts & hoodies" },
-  { id: "longsleeves", label: "Long Sleeves", description: "Thermals & long tops" },
-  { id: "joggers", label: "Joggers", description: "Sweatpants & joggers" },
+  { id: "jackets-hoodies", label: "Jackets & Hoodies", description: "Jackets, hoodies & sweatshirts" },
+  { id: "trousers-jeans", label: "Trousers & Jeans", description: "Jeans, trousers & joggers" },
   { id: "footwear", label: "Footwear", description: "Sneakers & shoes" },
-  { id: "accessories", label: "Accessories", description: "Bags, jewelry & more" },
+  { id: "watches-accessories", label: "Wristwatches & Accessories", description: "Watches, chains & more" },
+  { id: "corporate-dresses", label: "Corporate Dresses", description: "Formal & office wear" },
 ];
+
+// Legacy database values → current category
+const LEGACY_CATEGORY_MAP: Record<string, Category> = {
+  tops: "tops",
+  longsleeves: "tops",
+  hoodies: "jackets-hoodies",
+  outerwear: "jackets-hoodies",
+  bottoms: "trousers-jeans",
+  joggers: "trousers-jeans",
+  footwear: "footwear",
+  accessories: "watches-accessories",
+  dresses: "corporate-dresses",
+};
+
+export const CURRENT_CATEGORIES: Category[] = CATEGORIES.map((c) => c.id);
+
+// Map any stored value (new or legacy) to a current category
+export function normalizeCategory(raw: string): Category {
+  if (LEGACY_CATEGORY_MAP[raw]) return LEGACY_CATEGORY_MAP[raw];
+  return (raw as Category) || "tops";
+}
+
+// All database values (current + legacy) that belong to a given category
+export function categoryDbValues(category: Category): string[] {
+  const values = Object.entries(LEGACY_CATEGORY_MAP)
+    .filter(([, mapped]) => mapped === category)
+    .map(([stored]) => stored);
+  if (!values.includes(category)) values.push(category);
+  return values;
+}
+
+export function getCategoryLabel(id: string): string {
+  return CATEGORIES.find((c) => c.id === normalizeCategory(id))?.label ?? id;
+}
+
+// Strip em/en dashes and spaced hyphens from user-facing text
+export function sanitizeDisplayText(text: string): string {
+  return text
+    .replace(/[\u2014\u2013]/g, "")
+    .replace(/\s*-\s*/g, ", ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
 
 export function getProductsFromStorage(): Product[] {
   if (typeof window === "undefined") return SAMPLE_PRODUCTS;

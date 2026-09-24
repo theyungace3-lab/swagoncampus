@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { ProductCard } from "@/components/ProductCard";
+import { Reveal } from "@/components/Reveal";
 import { useProducts } from "@/contexts/ProductsContext";
 
 export function FeaturedProducts() {
@@ -24,7 +25,7 @@ export function FeaturedProducts() {
                 className="text-xs font-bold uppercase tracking-widest mb-2"
                 style={{ color: "var(--gold-primary)" }}
               >
-                ✦ Editor&apos;s Pick
+                Editor&apos;s Pick
               </p>
               <h2
                 id="featured-heading"
@@ -45,8 +46,10 @@ export function FeaturedProducts() {
           <hr className="gold-divider mb-8" />
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-5">
-            {featured.map((product) => (
-              <ProductCard key={product.id} product={product} />
+            {featured.map((product, i) => (
+              <Reveal key={product.id} delay={i * 80} className="h-full">
+                <ProductCard product={product} />
+              </Reveal>
             ))}
           </div>
 
@@ -74,7 +77,7 @@ export function FeaturedProducts() {
                 className="text-xs font-bold uppercase tracking-widest mb-2"
                 style={{ color: "var(--gold-primary)" }}
               >
-                ✦ Just Dropped
+                Just Dropped
               </p>
               <h2
                 id="new-arrivals-heading"
@@ -95,8 +98,10 @@ export function FeaturedProducts() {
           <hr className="gold-divider mb-8" />
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-5">
-            {newArrivals.map((product) => (
-              <ProductCard key={product.id} product={product} />
+            {newArrivals.map((product, i) => (
+              <Reveal key={product.id} delay={i * 80} className="h-full">
+                <ProductCard product={product} />
+              </Reveal>
             ))}
           </div>
         </section>

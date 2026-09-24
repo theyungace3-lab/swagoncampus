@@ -13,7 +13,7 @@ export default function CartPage() {
   const whatsappLines = items
     .map(
       (item) =>
-        `• ${item.product.name} (${item.selectedSize}, ${item.selectedColor}) x${item.quantity} — ${formatPrice(
+        `• ${item.product.name} (${item.selectedSize}, ${item.selectedColor}) x${item.quantity} · ${formatPrice(
           item.product.price * item.quantity
         )}`
     )
@@ -43,7 +43,7 @@ export default function CartPage() {
             className="text-xs font-bold uppercase tracking-widest mb-1"
             style={{ color: "var(--gold-primary)" }}
           >
-            ✦ Review
+            Review
           </p>
           <h1
             className="text-3xl font-black"

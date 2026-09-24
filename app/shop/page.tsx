@@ -3,9 +3,9 @@ import type { Metadata } from "next";
 import { ShopClient } from "./ShopClient";
 
 export const metadata: Metadata = {
-  title: "Shop All  Tops, Bottoms, Dresses & More",
+  title: "Shop All  Tops, Hoodies, Footwear & More",
   description:
-    "Browse all campus fashion for FUNAAB students. Filter by tops, bottoms, dresses, hoodies, footwear and accessories.",
+    "Browse all campus fashion for FUNAAB students. Filter by tops, jackets, hoodies, trousers, jeans, footwear, watches, accessories and corporate dresses.",
 };
 
 export default function ShopPage() {

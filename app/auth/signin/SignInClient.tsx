@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Eye, EyeOff, Sparkles, LogIn } from "lucide-react";
+import { Eye, EyeOff, ShoppingBag, LogIn } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export function SignInClient() {
@@ -47,7 +47,7 @@ export function SignInClient() {
         <div className="absolute inset-0 bg-black/50" />
         {/* Tagline */}
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-12">
-          <Sparkles className="w-12 h-12 mb-4" style={{ color: "#e8b84b" }} />
+          <ShoppingBag className="w-12 h-12 mb-4 animate-gentle-bounce" style={{ color: "#e8b84b" }} />
           <h2 className="text-4xl font-black text-white leading-tight mb-3">
             Welcome back to<br />
             <span style={{ color: "#e8b84b" }}>SwagOnCampus</span>
@@ -67,7 +67,7 @@ export function SignInClient() {
         <div className="w-full max-w-md">
           {/* Logo */}
           <div className="flex items-center gap-2 mb-8">
-            <Sparkles className="w-6 h-6" style={{ color: "var(--gold-primary)" }} />
+            <ShoppingBag className="w-6 h-6" style={{ color: "var(--gold-primary)" }} />
             <span className="text-2xl font-black gold-text">SwagOnCampus</span>
           </div>
 

@@ -51,9 +51,8 @@ body {
 
 /* ── Glitter / Sparkle Animation ── */
 @keyframes glitter-float {
-  0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.6; }
-  33% { transform: translateY(-8px) rotate(120deg); opacity: 1; }
-  66% { transform: translateY(4px) rotate(240deg); opacity: 0.4; }
+  0%, 100% { transform: translateY(0px); opacity: 0.6; }
+  50% { transform: translateY(-10px); opacity: 1; }
 }
 
 @keyframes shimmer {
@@ -77,6 +76,26 @@ body {
   to { transform: translateY(0); opacity: 1; }
 }
 
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(26px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes blob-float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-24px, 22px) scale(1.1); }
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@keyframes gentle-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
 /* ── Glitter Particles (decorative) ── */
 .glitter-bg {
   position: relative;
@@ -85,16 +104,16 @@ body {
 
 .glitter-bg::before,
 .glitter-bg::after {
-  content: "✦ ✧ ✦ ✧ ✦";
+  content: "· · · · · · ·";
   position: absolute;
   top: 10%;
   left: -5%;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--gold-light);
   opacity: 0.35;
   animation: glitter-float 4s ease-in-out infinite;
   pointer-events: none;
-  letter-spacing: 12px;
+  letter-spacing: 14px;
   white-space: nowrap;
 }
 
@@ -104,7 +123,7 @@ body {
   animation-delay: 2s;
   animation-duration: 5s;
   opacity: 0.25;
-  font-size: 9px;
+  font-size: 10px;
 }
 
 /* ── Gold Shimmer Text ── */
@@ -246,6 +265,64 @@ body {
 /* ── Sparkle in animation ── */
 .animate-sparkle {
   animation: sparkle-in 0.35s ease forwards;
+}
+
+/* ── Hero entrance ── */
+.animate-fade-in-up {
+  opacity: 0;
+  animation: fade-in-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* ── Slow floating blobs ── */
+.animate-blob {
+  animation: blob-float 9s ease-in-out infinite;
+}
+
+/* ── Scrolling promo marquee ── */
+.animate-marquee {
+  animation: marquee 26s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* ── Gentle bounce (icons) ── */
+.animate-gentle-bounce {
+  animation: gentle-bounce 2.4s ease-in-out infinite;
+}
+
+/* ── Scroll reveal ── */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+
+.reveal-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .animate-fade-in-up,
+  .animate-blob,
+  .animate-marquee,
+  .animate-gentle-bounce,
+  .badge-pulse {
+    animation: none;
+  }
+  .animate-fade-in-up {
+    opacity: 1;
+  }
 }
 
 /* ── Badge pulse ── */

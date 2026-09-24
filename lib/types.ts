@@ -2,7 +2,7 @@ export interface Product {
   id: string;
   name: string;
   price: number;
-  category: Category;
+  category: Category | LegacyCategory;
   image: string;
   description: string;
   sizes: string[];
@@ -14,13 +14,20 @@ export interface Product {
 
 export type Category =
   | "tops"
+  | "jackets-hoodies"
+  | "trousers-jeans"
+  | "footwear"
+  | "watches-accessories"
+  | "corporate-dresses";
+
+// Legacy category values that may still exist in the database
+export type LegacyCategory =
   | "bottoms"
   | "dresses"
   | "outerwear"
-  | "footwear"
-  | "accessories"
   | "hoodies"
   | "joggers"
+  | "accessories"
   | "longsleeves";
 
 export interface CartItem {

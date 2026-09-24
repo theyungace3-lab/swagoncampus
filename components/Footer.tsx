@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Sparkles, MapPin, MessageCircle } from "lucide-react";
+import { ShoppingBag, MapPin, MessageCircle } from "lucide-react";
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -17,12 +17,12 @@ export function Footer() {
           {/* Brand */}
           <div className="lg:col-span-2">
             <div className="flex items-center gap-2 mb-4">
-              <Sparkles className="w-6 h-6" style={{ color: "var(--gold-primary)" }} />
+              <ShoppingBag className="w-6 h-6" style={{ color: "var(--gold-primary)" }} />
               <span className="text-xl font-black gold-text">SwagOnCampus</span>
             </div>
             <p className="text-sm leading-relaxed mb-4" style={{ color: "var(--text-muted)" }}>
               The number one campus fashion destination for FUNAAB students.
-              Drip in style, order via WhatsApp — fast, easy, delivered.
+              Drip in style, order via WhatsApp. Fast, easy, delivered.
             </p>
             <div className="flex items-center gap-2 text-sm" style={{ color: "var(--text-muted)" }}>
               <MapPin className="w-4 h-4 flex-shrink-0" style={{ color: "var(--gold-primary)" }} />
@@ -42,10 +42,11 @@ export function Footer() {
               {[
                 { label: "All Items", href: "/shop" },
                 { label: "Tops", href: "/shop?category=tops" },
-                { label: "Bottoms", href: "/shop?category=bottoms" },
-                { label: "Dresses", href: "/shop?category=dresses" },
-                { label: "Hoodies", href: "/shop?category=hoodies" },
+                { label: "Jackets & Hoodies", href: "/shop?category=jackets-hoodies" },
+                { label: "Trousers & Jeans", href: "/shop?category=trousers-jeans" },
                 { label: "Footwear", href: "/shop?category=footwear" },
+                { label: "Wristwatches & Accessories", href: "/shop?category=watches-accessories" },
+                { label: "Corporate Dresses", href: "/shop?category=corporate-dresses" },
               ].map((link) => (
                 <li key={link.href}>
                   <Link
@@ -93,9 +94,6 @@ export function Footer() {
           style={{ borderColor: "var(--border-color)", color: "var(--text-muted)" }}
         >
           <p>© {currentYear} SwagOnCampus. All rights reserved.</p>
-          <p className="flex items-center gap-1">
-            Made with <span style={{ color: "var(--gold-primary)" }}>✦</span> for FUNAAB students
-          </p>
         </div>
       </div>
     </footer>

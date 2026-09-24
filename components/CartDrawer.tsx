@@ -13,7 +13,7 @@ export function CartDrawer() {
   const whatsappLines = items
     .map(
       (item) =>
-        `• ${item.product.name} (${item.selectedSize}, ${item.selectedColor}) x${item.quantity} — ${formatPrice(
+        `• ${item.product.name} (${item.selectedSize}, ${item.selectedColor}) x${item.quantity} · ${formatPrice(
           item.product.price * item.quantity
         )}`
     )

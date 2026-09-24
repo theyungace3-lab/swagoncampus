@@ -29,46 +29,8 @@ const CATEGORY_ICONS: Record<Category, React.ReactNode> = {
       />
     </svg>
   ),
-  bottoms: (
-    // Baggy jeans
-    <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-      <rect width="80" height="80" rx="16" fill="rgba(201,146,42,0.08)" />
-      <path
-        d="M20 18 L22 42 L32 42 L40 62 L48 42 L58 42 L60 18Z"
-        fill="#5b7fc4"
-        stroke="#c9922a"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-      <path d="M20 18 L60 18" stroke="#c9922a" strokeWidth="2" strokeLinecap="round" />
-      <path d="M40 18 L40 42" stroke="#c9922a" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="3 2" />
-      <path d="M25 22 L55 22" stroke="rgba(201,146,42,0.5)" strokeWidth="1" strokeLinecap="round" />
-    </svg>
-  ),
-  dresses: (
-    // Flowy dress
-    <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-      <rect width="80" height="80" rx="16" fill="rgba(201,146,42,0.08)" />
-      <path
-        d="M32 16 C32 16 30 20 30 24 L22 62 L58 62 L50 24 C50 20 48 16 48 16"
-        fill="#e8b4d0"
-        stroke="#c9922a"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M32 16 Q40 20 48 16"
-        fill="none"
-        stroke="#c9922a"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-      <ellipse cx="40" cy="16" rx="8" ry="3" fill="none" stroke="#c9922a" strokeWidth="1.5" />
-      <path d="M28 38 Q40 42 52 38" stroke="rgba(201,146,42,0.5)" strokeWidth="1" fill="none" strokeLinecap="round" />
-    </svg>
-  ),
-  outerwear: (
-    // Varsity jacket
+  "jackets-hoodies": (
+    // Varsity jacket with hood hint
     <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
       <rect width="80" height="80" rx="16" fill="rgba(201,146,42,0.08)" />
       <path
@@ -84,45 +46,22 @@ const CATEGORY_ICONS: Record<Category, React.ReactNode> = {
       <rect x="28" y="38" width="6" height="4" rx="1" fill="#c9922a" />
     </svg>
   ),
-  hoodies: (
-    // Pullover hoodie SVG
+  "trousers-jeans": (
+    // Straight-leg trousers
     <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
       <rect width="80" height="80" rx="16" fill="rgba(201,146,42,0.08)" />
       <path
-        d="M22 24 L16 34 L26 38 L26 60 L54 60 L54 38 L64 34 L58 24 C55 28 50 30 40 30 C30 30 25 28 22 24Z"
-        fill="#3d3d3d"
+        d="M24 16 L56 16 L58 44 L56 64 L44 64 L40 42 L36 64 L24 64 L22 44 Z"
+        fill="#4a6a9a"
         stroke="#c9922a"
         strokeWidth="1.5"
         strokeLinejoin="round"
       />
-      <path
-        d="M34 24 C35 22 37 20 40 20 C43 20 45 22 46 24"
-        fill="none"
-        stroke="#c9922a"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-      <ellipse cx="40" cy="24" rx="6" ry="4" fill="#2a2a2a" stroke="#c9922a" strokeWidth="1" />
-      <path d="M34 40 L46 40" stroke="rgba(201,146,42,0.4)" strokeWidth="1" strokeLinecap="round" />
-    </svg>
-  ),
-  joggers: (
-    // Jogger sweatpants
-    <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-      <rect width="80" height="80" rx="16" fill="rgba(201,146,42,0.08)" />
-      <path
-        d="M22 20 L22 46 L34 46 L38 64 L42 64 L46 46 L58 46 L58 20Z"
-        fill="#4a4a4a"
-        stroke="#c9922a"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-      <path d="M22 20 L58 20" stroke="#c9922a" strokeWidth="2" strokeLinecap="round" />
-      <path d="M22 26 L58 26" stroke="rgba(201,146,42,0.3)" strokeWidth="1" strokeLinecap="round" />
-      <path d="M40 20 L40 46" stroke="rgba(201,146,42,0.4)" strokeWidth="1" strokeLinecap="round" strokeDasharray="3 2" />
-      {/* Cuff at bottom */}
-      <path d="M34 60 L38 60" stroke="#c9922a" strokeWidth="1.5" strokeLinecap="round" />
-      <path d="M42 60 L46 60" stroke="#c9922a" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M24 16 L56 16" stroke="#c9922a" strokeWidth="2" strokeLinecap="round" />
+      <path d="M40 16 L40 42" stroke="#c9922a" strokeWidth="1.2" strokeLinecap="round" strokeDasharray="3 2" />
+      <path d="M28 20 L52 20" stroke="rgba(201,146,42,0.5)" strokeWidth="1" strokeLinecap="round" />
+      <path d="M28 30 L36 30" stroke="rgba(201,146,42,0.4)" strokeWidth="1" strokeLinecap="round" />
+      <path d="M44 30 L52 30" stroke="rgba(201,146,42,0.4)" strokeWidth="1" strokeLinecap="round" />
     </svg>
   ),
   footwear: (
@@ -153,83 +92,51 @@ const CATEGORY_ICONS: Record<Category, React.ReactNode> = {
       <path d="M32 47 L44 41" stroke="#c9922a" strokeWidth="1" strokeLinecap="round" />
     </svg>
   ),
-  longsleeves: (
-    // Long-sleeve top with cuffs
+  "watches-accessories": (
+    // Wristwatch
     <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
       <rect width="80" height="80" rx="16" fill="rgba(201,146,42,0.08)" />
-      {/* Body */}
-      <path
-        d="M28 22 L28 58 L52 58 L52 22"
-        fill="white"
-        stroke="#c9922a"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-      {/* Left long sleeve extending down */}
-      <path
-        d="M28 22 L20 24 L14 48 L20 50 L26 28 L28 30"
-        fill="white"
-        stroke="#c9922a"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-      {/* Right long sleeve extending down */}
-      <path
-        d="M52 22 L60 24 L66 48 L60 50 L54 28 L52 30"
-        fill="white"
-        stroke="#c9922a"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-      {/* Collar */}
-      <path
-        d="M28 22 Q34 26 40 26 Q46 26 52 22"
-        fill="none"
-        stroke="#c9922a"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      {/* Left cuff */}
-      <path d="M14 48 L20 50" stroke="#c9922a" strokeWidth="2" strokeLinecap="round" />
-      {/* Right cuff */}
-      <path d="M66 48 L60 50" stroke="#c9922a" strokeWidth="2" strokeLinecap="round" />
+      {/* Straps */}
+      <path d="M30 14 L50 14 L48 30 L32 30 Z" fill="#2a2a2a" stroke="#c9922a" strokeWidth="1.2" strokeLinejoin="round" />
+      <path d="M32 50 L48 50 L50 66 L30 66 Z" fill="#2a2a2a" stroke="#c9922a" strokeWidth="1.2" strokeLinejoin="round" />
+      {/* Case */}
+      <circle cx="40" cy="40" r="15" fill="#e8b84b" stroke="#c9922a" strokeWidth="1.5" />
+      <circle cx="40" cy="40" r="11" fill="white" stroke="#c9922a" strokeWidth="1" />
+      {/* Hands */}
+      <path d="M40 40 L40 33" stroke="#1a0e00" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M40 40 L45 42" stroke="#1a0e00" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="40" cy="40" r="1.5" fill="#1a0e00" />
+      {/* Crown */}
+      <rect x="55" y="38" width="3" height="4" rx="1" fill="#c9922a" />
     </svg>
   ),
-  accessories: (
-    // Chain necklace
+  "corporate-dresses": (
+    // Formal dress
     <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
       <rect width="80" height="80" rx="16" fill="rgba(201,146,42,0.08)" />
+      {/* Bodice */}
       <path
-        d="M20 30 Q40 20 60 30"
-        fill="none"
+        d="M32 16 L48 16 L50 30 L30 30 Z"
+        fill="#e8b4d0"
         stroke="#c9922a"
-        strokeWidth="2.5"
-        strokeLinecap="round"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
       />
+      {/* Skirt */}
       <path
-        d="M20 30 Q18 40 26 50 Q33 58 40 60 Q47 58 54 50 Q62 40 60 30"
-        fill="none"
+        d="M30 30 L50 30 L56 62 L24 62 Z"
+        fill="#f0cddc"
         stroke="#c9922a"
-        strokeWidth="2.5"
-        strokeLinecap="round"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
       />
-      {/* Pendant */}
-      <circle cx="40" cy="60" r="6" fill="#e8b84b" stroke="#c9922a" strokeWidth="1.5" />
-      <text x="40" y="64" textAnchor="middle" fontSize="7" fill="#1a0e00" fontWeight="bold">✦</text>
-      {/* Chain links detail */}
-      {[28, 36, 44, 52].map((x, i) => (
-        <ellipse
-          key={i}
-          cx={x}
-          cy={26 + Math.sin(i) * 2}
-          rx="2.5"
-          ry="1.5"
-          fill="none"
-          stroke="#e8b84b"
-          strokeWidth="1"
-          transform={`rotate(${i * 20} ${x} ${26 + Math.sin(i) * 2})`}
-        />
-      ))}
+      {/* Neckline */}
+      <path d="M32 16 Q40 21 48 16" fill="none" stroke="#c9922a" strokeWidth="1.5" strokeLinecap="round" />
+      {/* Belt */}
+      <path d="M30 30 L50 30" stroke="#c9922a" strokeWidth="2.5" strokeLinecap="round" />
+      {/* Seam detail */}
+      <path d="M40 30 L40 62" stroke="rgba(201,146,42,0.4)" strokeWidth="1" strokeLinecap="round" />
+      <path d="M30 44 Q40 47 50 44" stroke="rgba(201,146,42,0.5)" strokeWidth="1" fill="none" strokeLinecap="round" />
     </svg>
   ),
 };
@@ -238,12 +145,12 @@ export function CategoryCard({ id, label, description }: CategoryCardProps) {
   return (
     <Link
       href={`/shop?category=${id}`}
-      className="luxury-card flex flex-col items-center p-5 text-center group cursor-pointer hover:border-[var(--gold-primary)] transition-all duration-300"
-      aria-label={`Shop ${label} — ${description}`}
+      className="luxury-card flex flex-col items-center p-5 text-center group cursor-pointer h-full hover:border-[var(--gold-primary)] transition-all duration-300 focus-visible:ring-2 focus-visible:ring-[var(--gold-primary)] outline-none"
+      aria-label={`Shop ${label}: ${description}`}
     >
       {/* Icon */}
       <div
-        className="relative w-20 h-20 mb-4 rounded-2xl overflow-hidden transition-transform duration-300 group-hover:scale-110"
+        className="relative w-20 h-20 mb-4 rounded-2xl overflow-hidden transition-all duration-300 group-hover:scale-110 group-hover:-rotate-3"
         style={{
           filter: "drop-shadow(0 4px 8px rgba(201,146,42,0.2))",
         }}

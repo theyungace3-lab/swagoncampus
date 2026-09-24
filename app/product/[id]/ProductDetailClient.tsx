@@ -6,7 +6,8 @@ import { useState } from "react";
 import { ShoppingCart, MessageCircle, ArrowLeft, Heart, Check } from "lucide-react";
 import { useProducts } from "@/contexts/ProductsContext";
 import { useCart } from "@/contexts/CartContext";
-import { formatPrice } from "@/lib/products";
+import { formatPrice, getCategoryLabel } from "@/lib/products";
+import { Reveal } from "@/components/Reveal";
 
 export function ProductDetailClient({ id }: { id: string }) {
   const { products } = useProducts();
@@ -40,7 +41,7 @@ export function ProductDetailClient({ id }: { id: string }) {
   const chosenColor = selectedColor || product.colors[0];
 
   const whatsappMessage = encodeURIComponent(
-    `Hello, I'd like to place an order for: *${product.name}* (Size: ${chosenSize}, Color: ${chosenColor}) — ${formatPrice(product.price)}`
+    `Hello, I'd like to place an order for: *${product.name}* (Size: ${chosenSize}, Color: ${chosenColor}) (${formatPrice(product.price)})`
   );
   const whatsappUrl = `https://wa.me/2348185319037?text=${whatsappMessage}`;
 
@@ -73,7 +74,7 @@ export function ProductDetailClient({ id }: { id: string }) {
           className="capitalize"
           style={{ color: "var(--text-muted)" }}
         >
-          {product.category}
+          {getCategoryLabel(product.category)}
         </span>
         <span style={{ color: "var(--text-muted)" }}>/</span>
         <span
@@ -84,6 +85,7 @@ export function ProductDetailClient({ id }: { id: string }) {
         </span>
       </nav>
 
+      <Reveal>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
         {/* Image */}
         <div className="relative rounded-2xl overflow-hidden product-img-overlay"
@@ -125,7 +127,7 @@ export function ProductDetailClient({ id }: { id: string }) {
             className="text-xs font-bold uppercase tracking-widest mb-2"
             style={{ color: "var(--gold-primary)" }}
           >
-            {product.category}
+            {getCategoryLabel(product.category)}
           </span>
 
           {/* Name */}
@@ -181,7 +183,7 @@ export function ProductDetailClient({ id }: { id: string }) {
               className="text-xs font-bold uppercase tracking-wider mb-3"
               style={{ color: "var(--text-muted)" }}
             >
-              Color — <span style={{ color: "var(--gold-primary)" }}>{chosenColor}</span>
+              Color: <span style={{ color: "var(--gold-primary)" }}>{chosenColor}</span>
             </p>
             <div className="flex flex-wrap gap-2" role="group" aria-label="Select color">
               {product.colors.map((color) => (
@@ -235,6 +237,7 @@ export function ProductDetailClient({ id }: { id: string }) {
           </div>
         </div>
       </div>
+      </Reveal>
 
       {/* Related Products */}
       {related.length > 0 && (
@@ -248,11 +251,11 @@ export function ProductDetailClient({ id }: { id: string }) {
           </h2>
           <hr className="gold-divider mb-8" />
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {related.map((p) => (
+            {related.map((p, i) => (
+              <Reveal key={p.id} delay={i * 70} className="h-full">
               <Link
-                key={p.id}
                 href={`/product/${p.id}`}
-                className="luxury-card overflow-hidden group"
+                className="luxury-card overflow-hidden group h-full flex flex-col"
               >
                 <div className="relative" style={{ aspectRatio: "1" }}>
                   <Image
@@ -275,6 +278,7 @@ export function ProductDetailClient({ id }: { id: string }) {
                   </p>
                 </div>
               </Link>
+              </Reveal>
             ))}
           </div>
         </section>

@@ -1,16 +1,32 @@
+const PROMO_ITEMS = [
+  "Free delivery within FUNAAB campus",
+  "Order via WhatsApp in seconds",
+  "Exclusively for FUNAAB students",
+];
+
 export function PromoBar() {
+  const items = [...PROMO_ITEMS, ...PROMO_ITEMS];
+
   return (
     <div
-      className="w-full py-2 text-center text-xs font-semibold tracking-wide overflow-hidden"
+      className="w-full py-2 overflow-hidden"
       style={{
         background: "linear-gradient(90deg, var(--gold-dark), var(--gold-primary), var(--gold-shine), var(--gold-primary), var(--gold-dark))",
-        color: "#1a0e00",
       }}
+      aria-label="Promotional announcements"
     >
-      <div className="flex items-center justify-center gap-6 px-4 flex-wrap">
-        <span>✦ Free delivery within FUNAAB campus</span>
-        <span className="hidden sm:inline">✦ Order via WhatsApp in seconds</span>
-        <span className="hidden md:inline">✦ Exclusively for FUNAAB students</span>
+      <div className="animate-marquee flex w-max items-center">
+        {items.map((text, i) => (
+          <span
+            key={i}
+            className="flex items-center text-xs font-semibold tracking-wide whitespace-nowrap"
+            style={{ color: "#1a0e00" }}
+            aria-hidden={i >= PROMO_ITEMS.length}
+          >
+            <span className="px-6">{text}</span>
+            <span aria-hidden="true" className="opacity-40">•</span>
+          </span>
+        ))}
       </div>
     </div>
   );

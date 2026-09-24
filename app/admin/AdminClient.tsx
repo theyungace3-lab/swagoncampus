@@ -1,16 +1,16 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
-  Plus, Trash2, Edit2, Sparkles, Package,
+  Plus, Trash2, Edit2, Star, Package,
   ToggleLeft, ToggleRight, X, Check, LogOut, Tag, RefreshCw,
-  ShoppingBag, TrendingUp,
+  ShoppingBag, TrendingUp, ImagePlus,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { CATEGORIES, formatPrice } from "@/lib/products";
+import { CATEGORIES, formatPrice, normalizeCategory, getCategoryLabel } from "@/lib/products";
 import { Category } from "@/lib/types";
 import type { DbProduct, DbDiscount } from "@/lib/supabase/types";
 
@@ -52,6 +52,12 @@ export function AdminClient() {
   const [customSize, setCustomSize]   = useState("");
   const [customColor, setCustomColor] = useState("");
 
+  // Image upload state
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imageUploadError, setImageUploadError] = useState("");
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // Discount form
   const [discForm, setDiscForm] = useState({
     label: "", type: "percentage" as "percentage"|"fixed",
@@ -84,15 +90,42 @@ export function AdminClient() {
   }
 
   // ── Product helpers ──────────────────────────────────────
-  function startAdd() { setForm(EMPTY_FORM); setEditingId(null); setFormError(""); setView("add"); }
+  function startAdd() { setForm(EMPTY_FORM); setEditingId(null); setFormError(""); setImageUploadError(""); setView("add"); }
 
   function startEdit(p: DbProduct) {
     setForm({
-      name: p.name, price: p.price, category: p.category as Category,
+      name: p.name, price: p.price, category: normalizeCategory(p.category),
       image: p.image, description: p.description, sizes: [...p.sizes],
       colors: [...p.colors], in_stock: p.in_stock, featured: p.featured,
     });
     setEditingId(p.id); setFormError(""); setView("edit");
+  }
+
+  // Upload an image file to Supabase Storage and set the resulting URL
+  async function handleImageFile(file: File) {
+    setImageUploadError("");
+    if (!file.type.startsWith("image/")) {
+      setImageUploadError("Please choose an image file (jpg, png, webp, etc.).");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setImageUploadError("Image must be under 5MB.");
+      return;
+    }
+    setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Upload failed");
+      setForm((f) => ({ ...f, image: data.url as string }));
+    } catch (err) {
+      setImageUploadError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploadingImage(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   }
 
   function toggleSize(s: string) {
@@ -232,14 +265,74 @@ export function AdminClient() {
             <input type="number" min={0} value={form.price || ""} onChange={(e) => setForm((f) => ({ ...f, price: Number(e.target.value) }))} placeholder="e.g. 6500" className="admin-input" />
           </Field>
 
-          {/* Image URL */}
-          <Field label="Image URL" required hint="Paste a direct .jpg/.png URL (Unsplash, Google Drive public, etc.)">
-            <input type="url" value={form.image} onChange={(e) => setForm((f) => ({ ...f, image: e.target.value }))} placeholder="https://images.unsplash.com/..." className="admin-input" />
-            {form.image && (
-              <div className="mt-3 relative w-24 h-24 rounded-xl overflow-hidden border" style={{ borderColor: "var(--border-color)" }}>
-                <Image src={form.image} alt="Preview" fill sizes="96px" className="object-cover" />
-              </div>
-            )}
+          {/* Product Image */}
+          <Field label="Product Image" required hint="Upload a photo from your device, or paste a direct image URL below">
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragOver(false);
+                const file = e.dataTransfer.files?.[0];
+                if (file) handleImageFile(file);
+              }}
+              onClick={() => fileInputRef.current?.click()}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInputRef.current?.click(); } }}
+              className="relative flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-2xl px-4 py-8 cursor-pointer transition-all"
+              style={{
+                borderColor: dragOver ? "var(--gold-primary)" : "var(--border-color)",
+                background: dragOver ? "rgba(201,146,42,0.06)" : "var(--bg-secondary)",
+              }}
+              aria-label="Upload product image"
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleImageFile(file);
+                }}
+              />
+              {uploadingImage ? (
+                <>
+                  <div className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "var(--gold-primary)", borderTopColor: "transparent" }} />
+                  <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>Uploading image…</p>
+                </>
+              ) : form.image ? (
+                <>
+                  <div className="relative w-24 h-24 rounded-xl overflow-hidden border" style={{ borderColor: "var(--border-color)" }}>
+                    <Image src={form.image} alt="Preview" fill sizes="96px" className="object-cover" />
+                  </div>
+                  <p className="text-xs font-semibold" style={{ color: "var(--gold-primary)" }}>Click or drop a new image to replace</p>
+                </>
+              ) : (
+                <>
+                  <ImagePlus className="w-8 h-8 animate-gentle-bounce" style={{ color: "var(--gold-primary)" }} />
+                  <p className="text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>Click to upload or drag &amp; drop</p>
+                  <p className="text-xs" style={{ color: "var(--text-muted)" }}>JPG, PNG or WebP, up to 5MB</p>
+                </>
+              )}
+            </div>
+
+            {imageUploadError && <p className="text-xs text-red-500 mt-2">{imageUploadError}</p>}
+
+            <details className="mt-3">
+              <summary className="text-xs font-semibold cursor-pointer select-none" style={{ color: "var(--text-muted)" }}>
+                Or paste an image URL instead
+              </summary>
+              <input
+                type="url"
+                value={form.image}
+                onChange={(e) => setForm((f) => ({ ...f, image: e.target.value }))}
+                placeholder="https://.../product.jpg"
+                className="admin-input mt-2"
+              />
+            </details>
           </Field>
 
           {/* Description */}
@@ -312,7 +405,7 @@ export function AdminClient() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-6 h-6" style={{ color: "var(--gold-primary)" }} />
+          <Package className="w-6 h-6" style={{ color: "var(--gold-primary)" }} />
           <h1 className="text-3xl font-black gold-text">Admin Panel</h1>
         </div>
         <div className="flex items-center gap-3">
@@ -333,7 +426,7 @@ export function AdminClient() {
           {[
             { icon: <Package className="w-5 h-5" />, label: "Products", value: products.length },
             { icon: <ShoppingBag className="w-5 h-5" />, label: "In Stock", value: inStockCount },
-            { icon: <Sparkles className="w-5 h-5" />, label: "Featured", value: products.filter((p) => p.featured).length },
+            { icon: <Star className="w-5 h-5" />, label: "Featured", value: products.filter((p) => p.featured).length },
             { icon: <Tag className="w-5 h-5" />, label: "Active Sales", value: activeDiscounts },
           ].map((s) => (
             <div key={s.label} className="luxury-card p-4 flex items-center gap-3">
@@ -391,7 +484,7 @@ export function AdminClient() {
                       <p className="text-xs truncate max-w-[160px]" style={{ color: "var(--text-muted)" }}>{p.sizes.join(", ")}</p>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-xs font-semibold px-2.5 py-1 rounded-full capitalize" style={{ background: "rgba(201,146,42,0.1)", color: "var(--gold-primary)" }}>{p.category}</span>
+                      <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: "rgba(201,146,42,0.1)", color: "var(--gold-primary)" }}>{getCategoryLabel(p.category)}</span>
                     </td>
                     <td className="px-4 py-3"><span className="font-bold gold-text">{formatPrice(p.price)}</span></td>
                     <td className="px-4 py-3">
@@ -402,7 +495,7 @@ export function AdminClient() {
                     </td>
                     <td className="px-4 py-3">
                       <button onClick={() => toggleFeatured(p)} className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: p.featured ? "var(--gold-primary)" : "var(--text-muted)" }}>
-                        <Sparkles className="w-4 h-4" />{p.featured ? "Yes" : "No"}
+                        <Star className="w-4 h-4" />{p.featured ? "Yes" : "No"}
                       </button>
                     </td>
                     <td className="px-4 py-3">
@@ -435,7 +528,7 @@ export function AdminClient() {
               </Field>
               <Field label="Applies to product (leave blank for site-wide)">
                 <select value={discForm.product_id ?? ""} onChange={(e) => setDiscForm((f) => ({ ...f, product_id: e.target.value || null }))} className="admin-input">
-                  <option value="">— All products (site-wide) —</option>
+                    <option value="">All products (site-wide)</option>
                   {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </Field>
@@ -488,7 +581,7 @@ export function AdminClient() {
                         <td className="px-4 py-3 capitalize" style={{ color: "var(--text-muted)" }}>{d.type}</td>
                         <td className="px-4 py-3 font-bold gold-text">{d.type === "percentage" ? `${d.value}%` : formatPrice(d.value)}</td>
                         <td className="px-4 py-3 text-xs" style={{ color: "var(--text-muted)" }}>{d.product_id ? products.find((p) => p.id === d.product_id)?.name ?? "Specific" : "Site-wide"}</td>
-                        <td className="px-4 py-3 text-xs" style={{ color: "var(--text-muted)" }}>{d.ends_at ? new Date(d.ends_at).toLocaleDateString() : "—"}</td>
+                        <td className="px-4 py-3 text-xs" style={{ color: "var(--text-muted)" }}>{d.ends_at ? new Date(d.ends_at).toLocaleDateString() : "None"}</td>
                         <td className="px-4 py-3">
                           <button onClick={() => toggleDiscount(d)} className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: d.active ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)", color: d.active ? "#22c55e" : "#ef4444" }}>
                             {d.active ? "Active" : "Paused"}

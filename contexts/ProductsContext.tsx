@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { Product } from "@/lib/types";
-import { SAMPLE_PRODUCTS } from "@/lib/products";
+import { SAMPLE_PRODUCTS, normalizeCategory, sanitizeDisplayText } from "@/lib/products";
 
 interface ProductsContextValue {
   products: Product[];
@@ -21,10 +21,10 @@ const ProductsContext = createContext<ProductsContextValue | null>(null);
 function mapDbProduct(p: Record<string, unknown>): Product {
   return {
     id:          String(p.id),
-    name:        String(p.name),
-    description: String(p.description ?? ""),
+    name:        sanitizeDisplayText(String(p.name)),
+    description: sanitizeDisplayText(String(p.description ?? "")),
     price:       Number(p.price),
-    category:    String(p.category) as Product["category"],
+    category:    normalizeCategory(String(p.category)),
     image:       String(p.image),
     sizes:       Array.isArray(p.sizes)  ? (p.sizes  as string[]) : [],
     colors:      Array.isArray(p.colors) ? (p.colors as string[]) : [],
