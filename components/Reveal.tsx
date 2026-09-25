@@ -9,33 +9,51 @@ interface RevealProps {
   as?: "div" | "section";
 }
 
-function hasIntersectionObserver(): boolean {
-  return typeof window !== "undefined" && typeof IntersectionObserver !== "undefined";
-}
+// How long to wait for the observer before showing the content anyway.
+// Content must never be able to get stuck invisible.
+const REVEAL_TIMEOUT = 1500;
 
-// Fades + slides content up when it scrolls into view (once)
+/**
+ * Fades and slides content in when it scrolls into view.
+ *
+ * - Renders identically on the server and the client (no hydration mismatch).
+ * - Only applies the hidden state when JavaScript is running, so the content
+ *   is still visible with JS disabled.
+ * - Always reveals within REVEAL_TIMEOUT even if the observer never fires.
+ */
 export function Reveal({ children, delay = 0, className = "", as = "div" }: RevealProps) {
   const ref = useRef<HTMLDivElement>(null);
-  // Without IntersectionObserver support, render visible immediately
-  const [visible, setVisible] = useState(() => !hasIntersectionObserver());
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
-    if (!el || visible || !hasIntersectionObserver()) return;
+    if (!el || visible) return;
+
+    const show = () => setVisible(true);
+
+    // Safety net: reveal no matter what.
+    const timeout = setTimeout(show, REVEAL_TIMEOUT);
+
+    if (typeof IntersectionObserver === "undefined") {
+      show();
+      clearTimeout(timeout);
+      return;
+    }
 
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setVisible(true);
-            observer.disconnect();
-          }
+          if (entry.isIntersecting) show();
         });
       },
       { threshold: 0.08, rootMargin: "0px 0px -40px 0px" }
     );
     observer.observe(el);
-    return () => observer.disconnect();
+
+    return () => {
+      observer.disconnect();
+      clearTimeout(timeout);
+    };
   }, [visible]);
 
   const Tag = as;

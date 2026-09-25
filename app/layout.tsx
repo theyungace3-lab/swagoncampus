@@ -36,7 +36,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geist.variable}`}
       suppressHydrationWarning
     >
-      <body className="min-h-screen flex flex-col" style={{ background: "var(--bg-primary)" }}>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: "document.documentElement.classList.add('js')",
+          }}
+        />
+      </head>
+      <body className="min-h-screen flex flex-col js" style={{ background: "var(--bg-primary)" }}>
         <ThemeProvider>
           <AuthProvider>
             <ProductsProvider>

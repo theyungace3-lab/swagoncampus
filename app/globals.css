@@ -293,7 +293,16 @@ body {
 }
 
 /* ── Scroll reveal ── */
+/* Content is fully visible by default. The `js` class is added by an inline
+   script in the layout before the first paint, so the hidden state only
+   applies when JavaScript is actually running. Combined with the timeout in
+   the Reveal component, content can never get stuck invisible. */
 .reveal {
+  opacity: 1;
+  transform: none;
+}
+
+.js .reveal {
   opacity: 0;
   transform: translateY(24px);
   transition:
@@ -302,13 +311,15 @@ body {
   will-change: opacity, transform;
 }
 
-.reveal-visible {
+.js .reveal.reveal-visible {
   opacity: 1;
   transform: translateY(0);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .reveal {
+  /* Must match the specificity of `.js .reveal` above to actually win */
+  .reveal,
+  .js .reveal {
     opacity: 1;
     transform: none;
     transition: none;
