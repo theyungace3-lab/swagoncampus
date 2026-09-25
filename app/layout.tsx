@@ -5,9 +5,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { CartProvider } from "@/contexts/CartContext";
 import { ProductsProvider } from "@/contexts/ProductsContext";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { Navbar } from "@/components/Navbar";
-import { Footer } from "@/components/Footer";
-import { CartDrawer } from "@/components/CartDrawer";
+import { SiteChrome } from "@/components/SiteChrome";
 
 const geist = Geist({
   variable: "--font-geist-sans",
@@ -48,12 +46,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <AuthProvider>
             <ProductsProvider>
               <CartProvider>
-                <Navbar />
-                <main className="flex-1 pt-16">
-                  {children}
-                </main>
-                <Footer />
-                <CartDrawer />
+                <SiteChrome>{children}</SiteChrome>
               </CartProvider>
             </ProductsProvider>
           </AuthProvider>
