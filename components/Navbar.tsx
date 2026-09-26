@@ -5,8 +5,9 @@ import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { ShoppingCart, Sun, Moon, Menu, X, ShoppingBag, ShieldCheck, User, LogOut, ChevronDown } from "lucide-react";
+import { ShoppingCart, Sun, Moon, Menu, X, ShieldCheck, User, LogOut, ChevronDown } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+import { BrandMark } from "@/components/BrandMark";
 
 export function Navbar() {
   const pathname          = usePathname();
@@ -70,7 +71,7 @@ export function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group" aria-label="SwagOnCampus Home">
-            <ShoppingBag className="w-6 h-6 transition-transform duration-300 group-hover:rotate-6 group-hover:scale-110" style={{ color: "var(--gold-primary)" }} />
+            <BrandMark size={30} className="transition-transform duration-300 group-hover:rotate-6 group-hover:scale-110" />
             <span className="text-xl font-black tracking-tight gold-text hidden sm:block">SwagOnCampus</span>
             <span className="text-xl font-black tracking-tight gold-text sm:hidden">SOC</span>
           </Link>

@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, ShoppingBag, UserPlus, Check } from "lucide-react";
+import { Eye, EyeOff, UserPlus, Check } from "lucide-react";
+import { BrandMark } from "@/components/BrandMark";
 import { createClient } from "@/lib/supabase/client";
 
 export function SignUpClient() {
@@ -89,7 +90,7 @@ export function SignUpClient() {
       >
         <div className="absolute inset-0 bg-black/50" />
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-12">
-          <ShoppingBag className="w-12 h-12 mb-4 animate-gentle-bounce" style={{ color: "#e8b84b" }} />
+          <BrandMark size={56} className="mb-4 animate-gentle-bounce" />
           <h2 className="text-4xl font-black text-white leading-tight mb-3">
             Join the campus<br />
             <span style={{ color: "#e8b84b" }}>fashion wave.</span>
@@ -116,7 +117,7 @@ export function SignUpClient() {
       >
         <div className="w-full max-w-md">
           <div className="flex items-center gap-2 mb-6">
-            <ShoppingBag className="w-6 h-6" style={{ color: "var(--gold-primary)" }} />
+            <BrandMark size={28} />
             <span className="text-2xl font-black gold-text">SwagOnCampus</span>
           </div>
 

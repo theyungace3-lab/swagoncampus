@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ShoppingBag, MapPin, MessageCircle } from "lucide-react";
+import { MapPin, MessageCircle } from "lucide-react";
+import { BrandMark } from "@/components/BrandMark";
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -17,7 +18,7 @@ export function Footer() {
           {/* Brand */}
           <div className="lg:col-span-2">
             <div className="flex items-center gap-2 mb-4">
-              <ShoppingBag className="w-6 h-6" style={{ color: "var(--gold-primary)" }} />
+              <BrandMark size={26} />
               <span className="text-xl font-black gold-text">SwagOnCampus</span>
             </div>
             <p className="text-sm leading-relaxed mb-4" style={{ color: "var(--text-muted)" }}>

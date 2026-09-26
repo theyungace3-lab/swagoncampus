@@ -14,6 +14,7 @@ const geist = Geist({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://swagoncampus.vercel.app"),
   title: {
     default: "SwagOnCampus | Campus Fashion for FUNAAB Students",
     template: "%s | SwagOnCampus",
@@ -24,6 +25,18 @@ export const metadata: Metadata = {
   openGraph: {
     siteName: "SwagOnCampus",
     type: "website",
+    locale: "en_NG",
+    title: "SwagOnCampus | Campus Fashion for FUNAAB Students",
+    description:
+      "Premium streetwear and fresh campus styles, delivered to your hostel. Order in seconds on WhatsApp.",
+    images: [{ url: "/opengraph-image.png", width: 1200, height: 630, alt: "SwagOnCampus" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "SwagOnCampus | Campus Fashion for FUNAAB Students",
+    description:
+      "Premium streetwear and fresh campus styles, delivered to your hostel. Order in seconds on WhatsApp.",
+    images: ["/twitter-image.png"],
   },
 };
 
