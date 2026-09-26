@@ -7,136 +7,113 @@ interface CategoryCardProps {
   description: string;
 }
 
-// SVG category illustrations — clothing-accurate icons
+// Elegant monochrome line icons. Stroked with `currentColor` so they pick up
+// the gold accent in both light and dark mode, and stay visually consistent
+// across all six categories.
 const CATEGORY_ICONS: Record<Category, React.ReactNode> = {
   tops: (
-    // Plain white tee shirt
+    // Crew-neck tee
     <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-      <rect width="80" height="80" rx="16" fill="rgba(201,146,42,0.08)" />
       <path
-        d="M24 22 L18 30 L28 34 L28 58 L52 58 L52 34 L62 30 L56 22 C53 26 47 28 40 28 C33 28 27 26 24 22Z"
-        fill="white"
-        stroke="#c9922a"
+        d="M27 20 L18 26 L23 35 L29 32 L29 62 L51 62 L51 32 L57 35 L62 26 L53 20 C50 25 45 27 40 27 C35 27 30 25 27 20 Z"
+        stroke="currentColor"
         strokeWidth="2"
         strokeLinejoin="round"
+        strokeLinecap="round"
       />
       <path
-        d="M56 22 C53 26 47 28 40 28 C33 28 27 26 24 22"
-        fill="none"
-        stroke="#c9922a"
-        strokeWidth="1.5"
+        d="M27 20 C30 25 35 27 40 27 C45 27 50 25 53 20"
+        stroke="currentColor"
+        strokeWidth="2"
         strokeLinecap="round"
       />
     </svg>
   ),
   "jackets-hoodies": (
-    // Varsity jacket with hood hint
+    // Hooded sweatshirt with drawstrings and pouch pocket
     <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-      <rect width="80" height="80" rx="16" fill="rgba(201,146,42,0.08)" />
       <path
-        d="M22 22 L16 32 L26 36 L26 60 L54 60 L54 36 L64 32 L58 22 L50 26 L40 28 L30 26 Z"
-        fill="#1a1a2e"
-        stroke="#c9922a"
-        strokeWidth="1.5"
+        d="M24 26 L20 32 L26 36 L26 62 L54 62 L54 36 L60 32 L56 26 L48 30 L40 32 L32 30 Z"
+        stroke="currentColor"
+        strokeWidth="2"
         strokeLinejoin="round"
-      />
-      <path d="M40 28 L40 60" stroke="#c9922a" strokeWidth="1.5" strokeLinecap="round" />
-      <path d="M30 26 C32 30 36 32 40 32" stroke="#e8b84b" strokeWidth="1" strokeLinecap="round" />
-      <path d="M50 26 C48 30 44 32 40 32" stroke="#e8b84b" strokeWidth="1" strokeLinecap="round" />
-      <rect x="28" y="38" width="6" height="4" rx="1" fill="#c9922a" />
-    </svg>
-  ),
-  "trousers-jeans": (
-    // Straight-leg trousers
-    <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-      <rect width="80" height="80" rx="16" fill="rgba(201,146,42,0.08)" />
-      <path
-        d="M24 16 L56 16 L58 44 L56 64 L44 64 L40 42 L36 64 L24 64 L22 44 Z"
-        fill="#4a6a9a"
-        stroke="#c9922a"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-      <path d="M24 16 L56 16" stroke="#c9922a" strokeWidth="2" strokeLinecap="round" />
-      <path d="M40 16 L40 42" stroke="#c9922a" strokeWidth="1.2" strokeLinecap="round" strokeDasharray="3 2" />
-      <path d="M28 20 L52 20" stroke="rgba(201,146,42,0.5)" strokeWidth="1" strokeLinecap="round" />
-      <path d="M28 30 L36 30" stroke="rgba(201,146,42,0.4)" strokeWidth="1" strokeLinecap="round" />
-      <path d="M44 30 L52 30" stroke="rgba(201,146,42,0.4)" strokeWidth="1" strokeLinecap="round" />
-    </svg>
-  ),
-  footwear: (
-    // Chunky sneaker
-    <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-      <rect width="80" height="80" rx="16" fill="rgba(201,146,42,0.08)" />
-      <path
-        d="M14 52 C14 48 18 42 24 40 L36 36 L46 30 C50 28 54 30 56 34 L58 40 L64 42 C66 43 66 46 64 48 L64 52 C64 54 62 56 60 56 L18 56 C16 56 14 54 14 52Z"
-        fill="white"
-        stroke="#c9922a"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
+        strokeLinecap="round"
       />
       <path
-        d="M14 52 L64 52"
-        stroke="#c9922a"
+        d="M32 30 C32 24 36 21 40 21 C44 21 48 24 48 30"
+        stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"
       />
-      {/* Sole */}
+      <path d="M37 32 L36 41" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M43 32 L44 41" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
       <path
-        d="M14 53 Q39 57 64 53 L64 56 Q39 60 14 56 Z"
-        fill="#c9922a"
-        stroke="none"
+        d="M32 52 L48 52 L46 60 L34 60 Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+        strokeLinecap="round"
       />
-      {/* Laces */}
-      <path d="M30 44 L42 38" stroke="#c9922a" strokeWidth="1" strokeLinecap="round" />
-      <path d="M32 47 L44 41" stroke="#c9922a" strokeWidth="1" strokeLinecap="round" />
+    </svg>
+  ),
+  "trousers-jeans": (
+    // Waistband trousers with crease
+    <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+      <path
+        d="M26 18 L54 18 L56 42 L54 64 L44 64 L40 40 L36 64 L26 64 L24 42 Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      <path d="M26 25 L54 25" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M40 18 L40 40" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M30 30 L30 58" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity="0.6" />
+      <path d="M50 30 L50 58" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity="0.6" />
+    </svg>
+  ),
+  footwear: (
+    // Side-profile sneaker with laces and sole
+    <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+      <path
+        d="M16 50 L16 46 C16 43 18 41 21 40 L30 37 L40 32 C43 30 47 31 49 34 L53 41 L60 44 C63 45 64 48 63 51 L62 53 L18 53 C17 53 16 52 16 50 Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      <path
+        d="M16 55 Q40 59 62 55 L62 58 Q40 62 16 58 Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      <path d="M31 41 L39 36" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <path d="M34 45 L42 40" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
     </svg>
   ),
   "watches-accessories": (
-    // Wristwatch
+    // Wristwatch with crown
     <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-      <rect width="80" height="80" rx="16" fill="rgba(201,146,42,0.08)" />
-      {/* Straps */}
-      <path d="M30 14 L50 14 L48 30 L32 30 Z" fill="#2a2a2a" stroke="#c9922a" strokeWidth="1.2" strokeLinejoin="round" />
-      <path d="M32 50 L48 50 L50 66 L30 66 Z" fill="#2a2a2a" stroke="#c9922a" strokeWidth="1.2" strokeLinejoin="round" />
-      {/* Case */}
-      <circle cx="40" cy="40" r="15" fill="#e8b84b" stroke="#c9922a" strokeWidth="1.5" />
-      <circle cx="40" cy="40" r="11" fill="white" stroke="#c9922a" strokeWidth="1" />
-      {/* Hands */}
-      <path d="M40 40 L40 33" stroke="#1a0e00" strokeWidth="1.5" strokeLinecap="round" />
-      <path d="M40 40 L45 42" stroke="#1a0e00" strokeWidth="1.5" strokeLinecap="round" />
-      <circle cx="40" cy="40" r="1.5" fill="#1a0e00" />
-      {/* Crown */}
-      <rect x="55" y="38" width="3" height="4" rx="1" fill="#c9922a" />
+      <path d="M31 15 L49 15 L47 28 L33 28 Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M33 52 L47 52 L49 65 L31 65 Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <circle cx="40" cy="40" r="15" stroke="currentColor" strokeWidth="2" />
+      <circle cx="40" cy="40" r="10" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M40 40 L40 34" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M40 40 L45 41" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="40" cy="40" r="1.4" fill="currentColor" />
+      <path d="M55 37 L58 37 L58 43 L55 43" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   ),
   "corporate-dresses": (
-    // Formal dress
+    // Sheath dress with belt
     <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-      <rect width="80" height="80" rx="16" fill="rgba(201,146,42,0.08)" />
-      {/* Bodice */}
-      <path
-        d="M32 16 L48 16 L50 30 L30 30 Z"
-        fill="#e8b4d0"
-        stroke="#c9922a"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-      {/* Skirt */}
-      <path
-        d="M30 30 L50 30 L56 62 L24 62 Z"
-        fill="#f0cddc"
-        stroke="#c9922a"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-      {/* Neckline */}
-      <path d="M32 16 Q40 21 48 16" fill="none" stroke="#c9922a" strokeWidth="1.5" strokeLinecap="round" />
-      {/* Belt */}
-      <path d="M30 30 L50 30" stroke="#c9922a" strokeWidth="2.5" strokeLinecap="round" />
-      {/* Seam detail */}
-      <path d="M40 30 L40 62" stroke="rgba(201,146,42,0.4)" strokeWidth="1" strokeLinecap="round" />
-      <path d="M30 44 Q40 47 50 44" stroke="rgba(201,146,42,0.5)" strokeWidth="1" fill="none" strokeLinecap="round" />
+      <path d="M33 16 L47 16 L49 31 L31 31 Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M33 16 Q40 22 47 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M31 31 L49 31 L54 64 L26 64 Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M31 37 L49 37" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M40 37 L40 64" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity="0.6" />
     </svg>
   ),
 };
@@ -150,10 +127,7 @@ export function CategoryCard({ id, label, description }: CategoryCardProps) {
     >
       {/* Icon */}
       <div
-        className="relative w-20 h-20 mb-4 rounded-2xl overflow-hidden transition-all duration-300 group-hover:scale-110 group-hover:-rotate-3"
-        style={{
-          filter: "drop-shadow(0 4px 8px rgba(201,146,42,0.2))",
-        }}
+        className="category-icon-tile relative w-20 h-20 mb-4 rounded-2xl flex items-center justify-center p-3.5 transition-all duration-300 group-hover:scale-110 group-hover:-rotate-3"
       >
         {CATEGORY_ICONS[id]}
       </div>
