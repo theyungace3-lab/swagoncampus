@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Crown, MessageCircle, ShoppingBag } from "lucide-react";
+import { Crown, ShoppingBag } from "lucide-react";
+import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 
 export function HeroSection() {
   return (
@@ -76,7 +77,7 @@ export function HeroSection() {
               rel="noopener noreferrer"
               className="btn-ghost-gold inline-flex items-center gap-2 px-8 py-3.5 text-sm font-bold rounded-full"
             >
-              <MessageCircle className="w-4 h-4" />
+              <WhatsAppIcon className="w-4 h-4" />
               Order on WhatsApp
             </a>
           </div>

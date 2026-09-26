@@ -3,7 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { ShoppingCart, MessageCircle, Heart } from "lucide-react";
+import { ShoppingCart, Heart } from "lucide-react";
+import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { Product } from "@/lib/types";
 import { useCart } from "@/contexts/CartContext";
 import { formatPrice, getCategoryLabel } from "@/lib/products";
@@ -128,11 +129,13 @@ export function ProductCard({ product }: ProductCardProps) {
           <button
             onClick={handleAddToCart}
             disabled={!product.inStock}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-full text-xs font-bold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed btn-gold"
+            className="flex-1 min-w-0 h-10 flex items-center justify-center gap-1.5 px-3 rounded-full text-xs font-bold whitespace-nowrap overflow-hidden transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed btn-gold"
             aria-label={`Add ${product.name} to cart`}
           >
-            <ShoppingCart className="w-3.5 h-3.5" />
-            {addedFeedback ? "Added ✓" : "Add to Cart"}
+            <ShoppingCart className="w-3.5 h-3.5 flex-shrink-0" />
+            <span className="truncate">
+              {addedFeedback ? "Added ✓" : <><span className="sm:hidden">Add</span><span className="hidden sm:inline">Add to Cart</span></>}
+            </span>
           </button>
 
           <a
@@ -144,7 +147,7 @@ export function ProductCard({ product }: ProductCardProps) {
             style={{ background: "#25D366", color: "white" }}
             aria-label={`Order ${product.name} via WhatsApp`}
           >
-            <MessageCircle className="w-4 h-4" />
+            <WhatsAppIcon className="w-4 h-4" />
           </a>
         </div>
       </div>

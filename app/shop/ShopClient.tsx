@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { SlidersHorizontal, X } from "lucide-react";
 import { ProductCard } from "@/components/ProductCard";
 import { Reveal } from "@/components/Reveal";
@@ -17,13 +17,26 @@ const SORT_OPTIONS = [
 ];
 
 export function ShopClient() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const rawCategory = searchParams.get("category") ?? "all";
-  const initialCategory: Category | "all" =
+
+  // The URL is the source of truth for the active category. Deriving it here
+  // (instead of copying it into state once) is what makes category links from
+  // the navbar, footer and homepage actually change the filter when you are
+  // already on /shop.
+  const activeCategory: Category | "all" =
     rawCategory === "all" ? "all" : normalizeCategory(rawCategory);
 
+  function selectCategory(next: Category | "all") {
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === "all") params.delete("category");
+    else params.set("category", next);
+    const query = params.toString();
+    router.replace(query ? `/shop?${query}` : "/shop", { scroll: false });
+  }
+
   const { products } = useProducts();
-  const [activeCategory, setActiveCategory] = useState<Category | "all">(initialCategory);
   const [sort, setSort] = useState("newest");
   const [showFilters, setShowFilters] = useState(false);
 
@@ -104,7 +117,7 @@ export function ShopClient() {
           aria-label="Category filter"
         >
           <button
-            onClick={() => setActiveCategory("all")}
+            onClick={() => selectCategory("all")}
             className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-200 ${
               activeCategory === "all" ? "btn-gold" : "btn-ghost-gold"
             }`}
@@ -114,7 +127,7 @@ export function ShopClient() {
           {CATEGORIES.map((cat) => (
             <button
               key={cat.id}
-              onClick={() => setActiveCategory(cat.id)}
+              onClick={() => selectCategory(cat.id)}
               className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-200 ${
                 activeCategory === cat.id ? "btn-gold" : "btn-ghost-gold"
               }`}
@@ -128,7 +141,7 @@ export function ShopClient() {
         <div className="ml-auto flex items-center gap-2">
           {activeCategory !== "all" && (
             <button
-              onClick={() => setActiveCategory("all")}
+              onClick={() => selectCategory("all")}
               className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full"
               style={{
                 background: "rgba(201,146,42,0.12)",
@@ -175,7 +188,7 @@ export function ShopClient() {
             Try a different category or check back later.
           </p>
           <button
-            onClick={() => setActiveCategory("all")}
+            onClick={() => selectCategory("all")}
             className="mt-6 btn-gold px-6 py-2.5 text-sm font-bold rounded-full"
           >
             View All Items

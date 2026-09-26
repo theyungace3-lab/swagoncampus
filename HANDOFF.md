@@ -1,268 +1,91 @@
 # SwagOnCampus Handoff Document
 
-## Your Role
+You are continuing work on the **SwagOnCampus** clothing site at `C:\Users\HomePC\Downloads\SwagOnCampus`.
+It is a Next.js (App Router) + Supabase e-commerce store for FUNAAB students. Orders happen via WhatsApp (number `2348185319037`, hardcoded in several components). Live at `https://swagoncampus.vercel.app`. The git remote embeds a working token, so `git push origin main` needs no sign-in.
 
-You are Kilo, continuing work on the SwagOnCampus clothing website. This project is a Next.js + Supabase e-commerce site for FUNAAB students that orders via WhatsApp. The previous conversation already made major changes; your job now is to fix the remaining client-side rendering issue.
-
----
-
-## The Problem
-
-The admin panel shows 11 products, but the **shop page** and **home page** show nothing. The live site works fine in a clean browser (verified with headless Chrome), so the issue is that **the client-side JS is failing to render/hydrate in the user's actual browser**, and the user is seeing stale cached content.
-
-Root cause: The previous session introduced a `Reveal` component (scroll-reveal animation) with a **hydration mismatch**. The component rendered `reveal-visible` on the server but `reveal` (opacity 0) on the client initial render. React 19 handles this by bailing out and re-rendering, but in some cases the IntersectionObserver effect can fail to run, leaving content stuck invisible. Additionally, the home page products were wrapped in a `<Suspense>` boundary that rendered the fallback skeleton, and the real products were inside a `<div hidden id="S:0">` that only un-hides when JS successfully hydrates.
-
-## What Was Already Done (in the prior session)
-
-All of the following are **already committed and pushed** to `origin/main` on `github.com/theyungace3-lab/swagoncampus`:
-
-1. **Six new categories** defined in `lib/products.ts` (`tops`, `jackets-hoodies`, `trousers-jeans`, `footwear`, `watches-accessories`, `corporate-dresses`), with a `LEGACY_CATEGORY_MAP` that maps old DB values to new ones.
-2. `normalizeCategory()` and `sanitizeDisplayText()` helpers in `lib/products.ts`.
-3. `mapDbProduct` in `contexts/ProductsContext.tsx` now normalizes categories and strips dashes.
-4. `app/api/products/route.ts` GET now uses `categoryDbValues()` + `normalizeCategory()` so both old and new category values filter correctly.
-5. `components/Reveal.tsx` created (scroll-reveal) — **this is the buggy part**.
-6. `components/CategoryCard.tsx`, `CategorySection.tsx` updated for 6 categories with custom SVG icons.
-7. All Gemini-style `Sparkles`/`✦` icons removed across the codebase.
-8. "200+ Happy Students" and "Made with for FUNAAB students" copy removed.
-9. Em/en dashes stripped from visible text.
-10. Admin panel: image upload to Supabase Storage (`app/api/upload/route.ts`, `supabase/storage.sql`).
-11. `supabase/migrate-categories.sql` created and **already run by the user** in their Supabase SQL Editor.
-12. `supabase/storage.sql` already run by the user (bucket `product-images` is public, 2 policies confirmed).
-13. Vercel is live at `https://swagoncampus.vercel.app` — it was verified working with all 11 products, 6 category cards, and correct filtering.
-
-## What Needs to Be Done NOW
-
-### Step 1 — Fix the `Reveal` component hydration mismatch
-
-The file `components/Reveal.tsx` currently has this code (introduced in the prior session):
-
-```tsx
-// OLD BUGGY VERSION — DO NOT USE
-function hasIntersectionObserver(): boolean {
-  return typeof window !== "undefined" && typeof IntersectionObserver !== "undefined";
-}
-
-export function Reveal({ children, delay = 0, className = "", as = "div" }: RevealProps) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(() => !hasIntersectionObserver());
-  // ...
-}
-```
-
-**The bug**: `useState(() => !hasIntersectionObserver())` returns `true` on the server (because `typeof window === "undefined"`) but `false` on the client. This causes a hydration mismatch. React 19 logs a warning and re-renders the subtree on the client. In most cases the IntersectionObserver effect then fires and fixes it, but in edge cases (strict mode, SSR bailout, or when the element is in a Suspense boundary that fails to resume) the content stays invisible.
-
-**Replace `components/Reveal.tsx` with this version**:
-
-```tsx
-"use client";
-
-import { useEffect, useRef, useState, type ReactNode } from "react";
-
-interface RevealProps {
-  children: ReactNode;
-  delay?: number;
-  className?: string;
-  as?: "div" | "section";
-}
-
-// Safety net: reveal even if the observer never fires.
-const REVEAL_TIMEOUT = 1500;
-
-export function Reveal({ children, delay = 0, className = "", as = "div" }: RevealProps) {
-  const ref = useRef<HTMLDivElement>(null);
-  // Start invisible on BOTH server and client to avoid a hydration mismatch.
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || visible) return;
-
-    const show = () => setVisible(true);
-
-    if (typeof IntersectionObserver === "undefined") {
-      show();
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) show();
-        });
-      },
-      { threshold: 0.08, rootMargin: "0px 0px -40px 0px" }
-    );
-    observer.observe(el);
-
-    const timeout = setTimeout(show, REVEAL_TIMEOUT);
-    return () => {
-      observer.disconnect();
-      clearTimeout(timeout);
-    };
-  }, [visible]);
-
-  const Tag = as;
-  return (
-    <Tag
-      ref={ref as never}
-      className={`reveal ${visible ? "reveal-visible" : ""} ${className}`.trim()}
-      style={delay ? { transitionDelay: `${delay}ms` } : undefined}
-    >
-      {children}
-    </Tag>
-  );
-}
-```
-
-### Step 2 — Fix the CSS in `app/globals.css`
-
-The `.reveal` styles in `globals.css` are currently:
-
-```css
-/* ── Scroll reveal ── */
-.reveal {
-  opacity: 0;
-  transform: translateY(24px);
-  transition:
-    opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: opacity, transform;
-}
-
-.reveal-visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-```
-
-**Replace with a CSS-only fallback that never leaves content invisible**. The trick: use `@supports` so that if JS is completely absent (the observer never runs), the content is still visible. Actually simpler — just add a `prefers-reduced-motion` safe default:
-
-```css
-/* ── Scroll reveal ── */
-.reveal {
-  opacity: 1;
-  transform: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .reveal {
-    opacity: 0;
-    transform: translateY(24px);
-    transition:
-      opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1),
-      transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
-    will-change: opacity, transform;
-  }
-  .reveal.reveal-visible {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-```
-
-Wait — that still hides content for everyone who prefers motion. The safest approach is a small `no-js` / `js` class on `<html>`:
-
-Add to the top of `app/layout.tsx`'s `<body>`:
-
-```tsx
-<body
-  className="min-h-screen flex flex-col js"  // ← add the "js" class
-  ...
->
-```
-
-Then in `globals.css`:
-
-```css
-/* ── Scroll reveal ── */
-.reveal {
-  opacity: 1;
-  transform: none;
-}
-
-.js .reveal {
-  opacity: 0;
-  transform: translateY(24px);
-  transition:
-    opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: opacity, transform;
-}
-
-.js .reveal.reveal-visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-```
-
-This way: **no JS → content always visible** (the `.js` class isn't there). **JS works → scroll reveal animates in.** No hydration mismatch because the component starts `visible=false` on both server and client, and the CSS only hides it when the `js` class is present.
-
-### Step 3 — Verify the build and deploy
-
-```bash
-cd C:\Users\HomePC\Downloads\SwagOnCampus
-npm run build
-# commit + push
-git add -A
-git commit -m "fix: Reveal hydration mismatch, safe CSS fallback for no-JS"
-git push origin main
-```
-
-Vercel will auto-deploy from `origin/main`.
-
-### Step 4 — Ask the user to hard-refresh
-
-Tell the user: after the new deploy is live (~1–2 min), do a **hard refresh** (Ctrl+Shift+R or Ctrl+F5) on the shop and home pages. The new CSS/JS guarantees content will show even in the worst case.
+Read this file first, then resume where the prior session stopped.
 
 ---
 
-## Key Files & Their Roles
+## Where things stand
 
-| File | Role |
-|------|------|
-| `components/Reveal.tsx` | **Fix this** — scroll-reveal wrapper; had hydration mismatch |
-| `app/globals.css` | **Fix this** — `.reveal` CSS must not leave content invisible |
-| `app/layout.tsx` | Add `js` class to `<body>` for the CSS fallback |
-| `lib/products.ts` | `CATEGORIES`, `LEGACY_CATEGORY_MAP`, `normalizeCategory`, `sanitizeDisplayText`, `categoryDbValues` |
-| `lib/types.ts` | `Category` (6 values) + `LegacyCategory` types |
-| `contexts/ProductsContext.tsx` | `mapDbProduct` normalizes categories from the DB |
-| `app/api/products/route.ts` | GET uses `categoryDbValues` + `normalizeCategory` |
-| `app/api/upload/route.ts` | Admin image upload to Supabase Storage |
-| `supabase/storage.sql` | Public `product-images` bucket (already run) |
-| `supabase/migrate-categories.sql` | Category migration (already run by user) |
-| `next.config.ts` | `*.supabase.co` in `images.remotePatterns` |
+The repo has moved well past the old hydration-bug era. These are **all committed and pushed to `origin/main`**:
 
-## The User's Live Data (for reference)
+| Commit | What it did |
+|--------|-------------|
+| `5fda782` | module-level Supabase singleton; ignore `INITIAL_SESSION` in auth callback |
+| `da06e1e` | 6 categories, removed sparkles/dashes/copy, animations, admin image upload |
+| `dfa32df` | **fixed the `Reveal` hydration mismatch** + safe no-JS CSS fallback in `globals.css` + `js` class on `<body>` |
+| `e552577` | hid the site navbar/footer/cart drawer on the `/admin` panel (new `components/SiteChrome.tsx`) |
+| `db13940` | Temu-style silent add-to-cart + floating cart button (`components/FloatingCartButton.tsx`) |
+| `659a427` | replaced category icons with monochrome gold line icons |
+| `678cdd5` | category cards now use **real photos** in `public/categories/*.jpg` |
+| `79f736a` | **brand identity**: `components/BrandMark.tsx`, `app/icon.svg`, `app/apple-icon.png`, `app/opengraph-image.png`, `app/twitter-image.png`, `public/social/whatsapp-status.png`, generator script `scripts/brand-assets.cjs`, metadata in `app/layout.tsx` |
 
-The DB currently has 11 products with these categories (post-migration):
-- `watches-accessories`: 2 (Lige wristwatch, Gold Chain Necklace)
-- `footwear`: 1 (White Chunky Sneakers)
-- `tops`: 4 (Oversized Graphic Tee, Round neck, Classic White Tee, Thermal Long Sleeve)
-- `jackets-hoodies`: 2 (Campus Hoodie, Varsity Jacket)
-- `trousers-jeans`: 1 (Baggy Cargo Jeans)
-- `corporate-dresses`: 1 (Floral Midi Dress)
+`HEAD` is `79f736a` and matches `origin/main` (0 commits ahead).
 
-The Supabase Storage bucket `product-images` is public and has the user's uploaded Lige wristwatch image:
-`https://wmgnwtyhqfazkdbzlewz.supabase.co/storage/v1/object/public/product-images/product-1790312531410-v927uy.png`
+---
 
-## Credentials
+## The UNCOMMITTED work sitting in the working tree
 
-- Git remote: `https://github.com/theyungace3-lab/swagoncampus` (token embedded in remote URL — works for push)
-- Supabase project: `swagoncampus` under org `theyungace3-lab`
-- Vercel deployment: `https://swagoncampus.vercel.app`
-- The `.env.local` in the project folder has **placeholder** Supabase values; the real ones are in Vercel's env vars. You cannot test the live API locally.
+The last user request had four parts. The **code is already written** (build passes, `npx eslint` clean on the touched files — the one remaining error is a pre-existing `react-hooks/set-state-in-effect` warning at `components/Navbar.tsx` around the `setMounted` effect, not introduced here). What's left is to **verify, commit, and push**.
 
-## What NOT to Do
+### 1. Header now exposes all 6 categories
+`components/Navbar.tsx`:
+- `navLinks` was trimmed to just Home + Shop.
+- A **Categories dropdown** (desktop) and a **categories section** (mobile menu) now list all six categories, built from `CATEGORIES` in `lib/products.ts` so it stays in sync.
+- `ChevronDown` toggles the dropdown; click-outside closes it.
 
-- Do not re-run `supabase/schema.sql` — it will duplicate products (no unique constraint on name).
-- Do not delete the `product-images` bucket.
-- Do not change the category IDs again — they're already migrated in the DB.
-- Do not remove the `normalizeCategory` fallback — it's what makes old and new DB values coexist.
+### 2. "Add to Cart" no longer overlaps on narrow cards
+`components/ProductCard.tsx` — the actions row was rebuilt:
+- The add-to-cart button is now a fixed `h-10` with `whitespace-nowrap`, `min-w-0`, `overflow-hidden` and a `truncate` label.
+- Label is responsive: shows **"Add"** below `sm`, **"Add to Cart"** at `sm` and up.
+- The WhatsApp circle button stays `w-10 h-10` with `flex-shrink-0`.
 
-## Quick Verification Checklist
+### 3. Footer / category links actually change the shop filter
+`app/shop/ShopClient.tsx` — the active category is now **derived from the URL** instead of captured into `useState` once:
+- `activeCategory` is read straight from `useSearchParams()`.
+- A new `selectCategory(next)` helper does `router.replace('/shop?category=…' or '/shop')` with `{ scroll: false }`, so clicking footer/navbar/homepage category links updates the filter even when already mounted on `/shop`.
+- `normalizeCategory()` still handles legacy values.
 
-After deploying the fix:
-1. `https://swagoncampus.vercel.app/` — should show 6 category cards, 8 product cards (4 featured + 4 new arrivals), and the user's Lige wristwatch.
-2. `https://swagoncampus.vercel.app/shop` — should show all 11 products.
-3. `https://swagoncampus.vercel.app/shop?category=tops` — should show exactly 4 products.
-4. Hard refresh (Ctrl+Shift+R) clears any browser cache issues.
+### 4. Real WhatsApp logo everywhere
+New `components/WhatsAppIcon.tsx` — the official WhatsApp glyph (standard path data, `fill="currentColor"`). It replaced the generic lucide `MessageCircle` in **six** places:
+- `components/ProductCard.tsx`
+- `components/CartDrawer.tsx`
+- `components/Footer.tsx`
+- `components/HeroSection.tsx`
+- `app/cart/page.tsx`
+- `app/product/[id]/ProductDetailClient.tsx`
+
+---
+
+## Do this next (the actual task)
+
+1. **Verify the uncommitted changes render.** Quick check: run `npm run build` (should pass), optionally `npm run start` and open `/`, `/shop`, `/shop?category=tops`, `/cart` to confirm the navbar dropdown, the category-filter-from-URL behavior, the fixed add-to-cart button, and the WhatsApp logo all look right. Hard-refresh to bust cache.
+2. **Commit and push** (this was the last explicit intent, but confirm with the user if unsure):
+   ```
+   git add -A
+   git commit -m "fix: all categories in header, URL-synced shop filter, WhatsApp logo, no add-to-cart overlap"
+   git push origin main
+   ```
+3. **Watch the Vercel auto-deploy**, then hard-refresh the live site.
+
+---
+
+## Gotchas / notes
+
+- **`npx eslint` will always show 1 pre-existing error**: `react-hooks/set-state-in-effect` for `useEffect(() => { setMounted(true) }, [])` in `components/Navbar.tsx`. Not caused by this work. Leave it or fix separately (the mounted-gated rendering is intentional for the `next-themes` toggle).
+- **`Reveal` + `.reveal` CSS + `js` body class** are already fixed and committed (`dfa32df`). Don't regress them. `app/globals.css` only hides `.reveal` when the `js` class is present, so no-JS visitors always see content.
+- The `lucide-react` version in `package.json` is `^1.32.0` (unusual for lucide). Don't "fix" it — it's pinned by the project.
+- The WhatsApp phone number `2348185319037` is hardcoded in `ProductCard`, `CartDrawer`, `Footer`, `HeroSection`, `ProductDetailClient`, and `cart/page.tsx`. If it changes, update all of them.
+- `public/categories/*.jpg` are the real category photos. They are **low-res** (roughly 200–550 px). They're fine for the small category tiles but will look soft on high-DPI phones. If the user supplies crisper images, drop them into `public/categories/` with the same filenames and push.
+- **`scripts/brand-assets.cjs`** regenerates the brand PNGs (og image, apple icon, WhatsApp status). It needs `sharp` (present in `node_modules` via Next). Re-run it if you change the mark, then commit the regenerated PNGs. The `BrandMark.tsx` inline SVG is the source of truth for the in-UI logo.
+- The `.kilo/worktrees/quilt-darkness/` directory is a stale Agent-Manager worktree that is **git-ignored** (it can't be pushed). It gets linted as if it were the repo, which is just noise — ignore it or clean it up separately.
+- `app/ShopClient.tsx` uses `useSearchParams`, which is why `app/shop/page.tsx` wraps it in `<Suspense>`. That pattern is required or the build fails.
+
+## Quick orientation
+
+- Categories live in `lib/products.ts` (`CATEGORIES`, `LEGACY_CATEGORY_MAP`, `normalizeCategory`).
+- Product data comes from Supabase via `contexts/ProductsContext.tsx` and `app/api/products/route.ts`.
+- The admin panel is at `/admin`, guarded in `app/admin/AdminClient.tsx`; the site chrome is hidden there via `components/SiteChrome.tsx`.
+- Theme tokens (gold/brown, light/dark) are in `app/globals.css` (`:root` and `.dark`).

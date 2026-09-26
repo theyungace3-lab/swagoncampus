@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { MapPin, MessageCircle } from "lucide-react";
+import { MapPin } from "lucide-react";
+import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { BrandMark } from "@/components/BrandMark";
 
 export function Footer() {
@@ -83,7 +84,7 @@ export function Footer() {
                 color: "white",
               }}
             >
-              <MessageCircle className="w-4 h-4" />
+              <WhatsAppIcon className="w-4 h-4" />
               Chat on WhatsApp
             </a>
           </div>

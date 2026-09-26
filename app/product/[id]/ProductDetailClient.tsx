@@ -3,7 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { ShoppingCart, MessageCircle, ArrowLeft, Heart, Check } from "lucide-react";
+import { ShoppingCart, ArrowLeft, Heart, Check } from "lucide-react";
+import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { useProducts } from "@/contexts/ProductsContext";
 import { useCart } from "@/contexts/CartContext";
 import { formatPrice, getCategoryLabel } from "@/lib/products";
@@ -222,7 +223,7 @@ export function ProductDetailClient({ id }: { id: string }) {
               className="flex-1 flex items-center justify-center gap-2 py-4 rounded-full font-bold text-sm transition-all duration-200 hover:scale-[1.02]"
               style={{ background: "#25D366", color: "white" }}
             >
-              <MessageCircle className="w-5 h-5" />
+              <WhatsAppIcon className="w-5 h-5" />
               Order on WhatsApp
             </a>
           </div>

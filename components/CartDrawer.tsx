@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { X, Trash2, ShoppingBag, MessageCircle } from "lucide-react";
+import { X, Trash2, ShoppingBag } from "lucide-react";
+import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { useCart } from "@/contexts/CartContext";
 import { formatPrice } from "@/lib/products";
 
@@ -233,7 +234,7 @@ export function CartDrawer() {
               className="flex items-center justify-center gap-2 w-full py-3 rounded-full text-sm font-bold transition-all duration-200 hover:scale-[1.02]"
               style={{ background: "#25D366", color: "white" }}
             >
-              <MessageCircle className="w-4 h-4" />
+              <WhatsAppIcon className="w-4 h-4" />
               Order via WhatsApp
             </a>
           </div>
