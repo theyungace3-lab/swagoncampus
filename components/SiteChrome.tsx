@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { CartDrawer } from "@/components/CartDrawer";
+import { FloatingCartButton } from "@/components/FloatingCartButton";
 
 /**
  * Renders the store's chrome (fixed navbar, footer, cart drawer) around public
@@ -24,6 +25,7 @@ export function SiteChrome({ children }: { children: ReactNode }) {
       <Navbar />
       <main className="flex-1 pt-16">{children}</main>
       <Footer />
+      <FloatingCartButton />
       <CartDrawer />
     </>
   );

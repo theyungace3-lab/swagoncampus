@@ -13,7 +13,7 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
-  const { addToCart, openCart } = useCart();
+  const { addToCart } = useCart();
   const [wished, setWished] = useState(false);
   const [addedFeedback, setAddedFeedback] = useState(false);
 
@@ -30,7 +30,6 @@ export function ProductCard({ product }: ProductCardProps) {
     e.stopPropagation();
     addToCart(product, defaultSize, defaultColor);
     setAddedFeedback(true);
-    openCart();
     setTimeout(() => setAddedFeedback(false), 1500);
   }
 

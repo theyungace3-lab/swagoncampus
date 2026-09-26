@@ -11,7 +11,7 @@ import { Reveal } from "@/components/Reveal";
 
 export function ProductDetailClient({ id }: { id: string }) {
   const { products } = useProducts();
-  const { addToCart, openCart } = useCart();
+  const { addToCart } = useCart();
 
   const product = products.find((p) => p.id === id);
 
@@ -48,7 +48,6 @@ export function ProductDetailClient({ id }: { id: string }) {
   function handleAddToCart() {
     addToCart(product!, chosenSize, chosenColor);
     setAddedFeedback(true);
-    openCart();
     setTimeout(() => setAddedFeedback(false), 2000);
   }
 
