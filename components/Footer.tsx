@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin } from "lucide-react";
+import { Mail, MapPin, Phone } from "lucide-react";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { BrandMark } from "@/components/BrandMark";
 import { CATEGORY_SECTIONS } from "@/lib/products";
@@ -80,17 +80,39 @@ export function Footer() {
             ))}
           </div>
 
-          {/* Contact */}
+          {/* Customer support */}
           <div>
             <h3
               className="font-bold text-sm uppercase tracking-widest mb-4"
               style={{ color: "var(--gold-primary)" }}
             >
-              Order Now
+              Customer Support
             </h3>
             <p className="text-sm mb-4" style={{ color: "var(--text-muted)" }}>
-              See something you like? Tap the WhatsApp button on any product to place your order instantly.
+              Questions about an order? Email or call us, or chat on WhatsApp.
             </p>
+            <ul className="space-y-2 mb-4">
+              <li>
+                <a
+                  href="mailto:swagoncampus@gmail.com"
+                  className="flex items-center gap-2 text-sm transition-colors duration-200 hover:text-[var(--gold-primary)]"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  <Mail className="w-4 h-4 flex-shrink-0" style={{ color: "var(--gold-primary)" }} />
+                  <span>swagoncampus@gmail.com</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="tel:+2348103843353"
+                  className="flex items-center gap-2 text-sm transition-colors duration-200 hover:text-[var(--gold-primary)]"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  <Phone className="w-4 h-4 flex-shrink-0" style={{ color: "var(--gold-primary)" }} />
+                  <span>08103843353</span>
+                </a>
+              </li>
+            </ul>
             <a
               href="https://wa.me/2348185319037?text=Hello%2C%20I%27d%20like%20to%20place%20an%20order"
               target="_blank"

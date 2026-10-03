@@ -2,11 +2,11 @@
 
 import { useState, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { SlidersHorizontal, X } from "lucide-react";
+import { SlidersHorizontal, Search, X } from "lucide-react";
 import { ProductCard } from "@/components/ProductCard";
 import { Reveal } from "@/components/Reveal";
 import { useProducts } from "@/contexts/ProductsContext";
-import { CATEGORIES, CATEGORY_SECTIONS, normalizeCategory } from "@/lib/products";
+import { CATEGORIES, CATEGORY_SECTIONS, getCategoryLabel, normalizeCategory } from "@/lib/products";
 import { Category } from "@/lib/types";
 
 const SORT_OPTIONS = [
@@ -28,12 +28,25 @@ export function ShopClient() {
   const activeCategory: Category | "all" =
     rawCategory === "all" ? "all" : normalizeCategory(rawCategory);
 
+  const query = (searchParams.get("q") ?? "").trim();
+
   function selectCategory(next: Category | "all") {
     const params = new URLSearchParams(searchParams.toString());
     if (next === "all") params.delete("category");
     else params.set("category", next);
-    const query = params.toString();
-    router.replace(query ? `/shop?${query}` : "/shop", { scroll: false });
+    const qs = params.toString();
+    router.replace(qs ? `/shop?${qs}` : "/shop", { scroll: false });
+  }
+
+  function clearSearch() {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("q");
+    const qs = params.toString();
+    router.replace(qs ? `/shop?${qs}` : "/shop", { scroll: false });
+  }
+
+  function clearAll() {
+    router.replace("/shop", { scroll: false });
   }
 
   const { products } = useProducts();
@@ -45,6 +58,22 @@ export function ShopClient() {
 
     if (activeCategory !== "all") {
       result = result.filter((p) => normalizeCategory(p.category) === activeCategory);
+    }
+
+    if (query) {
+      const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+      result = result.filter((p) => {
+        const haystack = [
+          p.name,
+          p.description,
+          getCategoryLabel(p.category),
+          p.colors.join(" "),
+          p.sizes.join(" "),
+        ]
+          .join(" ")
+          .toLowerCase();
+        return terms.every((term) => haystack.includes(term));
+      });
     }
 
     switch (sort) {
@@ -64,12 +93,18 @@ export function ShopClient() {
     }
 
     return result;
-  }, [products, activeCategory, sort]);
+  }, [products, activeCategory, query, sort]);
 
   const categoryLabel =
     activeCategory === "all"
       ? "All Items"
       : CATEGORIES.find((c) => c.id === activeCategory)?.label ?? activeCategory;
+
+  const headingLabel = query
+    ? activeCategory === "all"
+      ? `Results for "${query}"`
+      : `Results for "${query}" in ${categoryLabel}`
+    : categoryLabel;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -86,7 +121,7 @@ export function ShopClient() {
           className="text-4xl sm:text-5xl font-black"
           style={{ color: "var(--text-primary)" }}
         >
-          {categoryLabel}
+          {headingLabel}
         </h1>
         <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
           {filtered.length} item{filtered.length !== 1 ? "s" : ""}
@@ -149,6 +184,21 @@ export function ShopClient() {
 
         {/* Sort */}
         <div className="ml-auto flex items-center gap-2">
+          {query && (
+            <button
+              onClick={clearSearch}
+              className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full max-w-[220px]"
+              style={{
+                background: "rgba(201,146,42,0.12)",
+                color: "var(--gold-primary)",
+              }}
+              aria-label={`Clear search for ${query}`}
+            >
+              <Search className="w-3 h-3" />
+              <span className="truncate">{query}</span>
+              <X className="w-3 h-3 flex-shrink-0" />
+            </button>
+          )}
           {activeCategory !== "all" && (
             <button
               onClick={() => selectCategory("all")}
@@ -195,10 +245,12 @@ export function ShopClient() {
             No items found
           </h2>
           <p style={{ color: "var(--text-muted)" }}>
-            Try a different category or check back later.
+            {query
+              ? `Nothing matches "${query}". Try a different search term or browse everything.`
+              : "Try a different category or check back later."}
           </p>
           <button
-            onClick={() => selectCategory("all")}
+            onClick={clearAll}
             className="mt-6 btn-gold px-6 py-2.5 text-sm font-bold rounded-full"
           >
             View All Items

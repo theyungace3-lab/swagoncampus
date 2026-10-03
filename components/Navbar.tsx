@@ -5,8 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { ShoppingCart, Sun, Moon, Menu, X, ShieldCheck, User, LogOut, ChevronDown } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { ShoppingCart, Sun, Moon, Menu, X, ShieldCheck, User, LogOut, ChevronDown, Search } from "lucide-react";
+import { useState, useEffect, useRef, type FormEvent } from "react";
 import { BrandMark } from "@/components/BrandMark";
 import { CATEGORY_SECTIONS } from "@/lib/products";
 
@@ -20,6 +20,7 @@ export function Navbar() {
   const [menuOpen, setMenuOpen]       = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [catMenuOpen, setCatMenuOpen]   = useState(false);
+  const [searchQuery, setSearchQuery]   = useState("");
   const [scrolled, setScrolled]       = useState(false);
   const [mounted, setMounted]         = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -61,6 +62,15 @@ export function Navbar() {
     if (href === "/") return pathname === "/";
     return pathname.startsWith(href.split("?")[0]);
   };
+
+  function handleSearch(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const q = searchQuery.trim();
+    if (!q) return;
+    setMenuOpen(false);
+    setCatMenuOpen(false);
+    router.push(`/shop?q=${encodeURIComponent(q)}`);
+  }
 
   async function handleSignOut() {
     await signOut();
@@ -154,6 +164,23 @@ export function Navbar() {
                 </div>
               )}
             </div>
+
+            {/* Desktop search */}
+            <form onSubmit={handleSearch} className="relative ml-1 hidden md:block" role="search">
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none"
+                style={{ color: "var(--text-muted)" }}
+              />
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search products..."
+                aria-label="Search products"
+                className="w-32 xl:w-48 pl-9 pr-3 py-1.5 rounded-full text-xs font-semibold border outline-none transition-colors focus:border-[var(--gold-primary)]"
+                style={{ borderColor: "var(--border-color)", background: "var(--bg-card)", color: "var(--text-primary)" }}
+              />
+            </form>
           </nav>
 
           {/* Actions */}
@@ -278,6 +305,23 @@ export function Navbar() {
                   {link.label}
                 </Link>
               ))}
+
+              {/* Mobile search */}
+              <form onSubmit={handleSearch} className="relative px-4 pt-3" role="search">
+                <Search
+                  className="absolute left-7 top-1/2 translate-y-[2px] w-4 h-4 pointer-events-none"
+                  style={{ color: "var(--text-muted)" }}
+                />
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search products..."
+                  aria-label="Search products"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm font-semibold border outline-none transition-colors focus:border-[var(--gold-primary)]"
+                  style={{ borderColor: "var(--border-color)", background: "var(--bg-card)", color: "var(--text-primary)" }}
+                />
+              </form>
 
               {/* Categories */}
               <div className="px-4 pt-3 pb-1">
