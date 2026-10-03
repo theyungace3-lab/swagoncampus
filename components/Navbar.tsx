@@ -1,14 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useProducts } from "@/contexts/ProductsContext";
 import { ShoppingCart, Sun, Moon, Menu, X, ShieldCheck, User, LogOut, ChevronDown, Search } from "lucide-react";
-import { useState, useEffect, useRef, type FormEvent } from "react";
+import { useState, useEffect, useRef, useMemo, type FormEvent } from "react";
 import { BrandMark } from "@/components/BrandMark";
-import { CATEGORY_SECTIONS } from "@/lib/products";
+import { CATEGORY_SECTIONS, formatPrice } from "@/lib/products";
 
 export function Navbar() {
   const pathname          = usePathname();
@@ -22,10 +24,12 @@ export function Navbar() {
   const [catMenuOpen, setCatMenuOpen]   = useState(false);
   const [openSection, setOpenSection]   = useState<"men" | "women" | null>(null);
   const [searchQuery, setSearchQuery]   = useState("");
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [scrolled, setScrolled]       = useState(false);
   const [mounted, setMounted]         = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const catMenuRef  = useRef<HTMLDivElement>(null);
+  const searchRef   = useRef<HTMLDivElement>(null);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -44,10 +48,49 @@ export function Navbar() {
       if (catMenuRef.current && !catMenuRef.current.contains(e.target as Node)) {
         setCatMenuOpen(false);
       }
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setMobileSearchOpen(false);
+      }
     }
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
+
+  const { products } = useProducts();
+
+  const suggestions = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return [];
+    return products
+      .filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.description.toLowerCase().includes(q)
+      )
+      .slice(0, 5);
+  }, [products, searchQuery]);
+
+  function openMobileSearch() {
+    setMobileSearchOpen(true);
+    setSearchQuery("");
+    setMenuOpen(false);
+  }
+
+  function closeMobileSearch() {
+    setMobileSearchOpen(false);
+    setSearchQuery("");
+  }
+
+  function handleSearch(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const q = searchQuery.trim();
+    if (!q) return;
+    setMenuOpen(false);
+    setCatMenuOpen(false);
+    setMobileSearchOpen(false);
+    setSearchQuery("");
+    router.push(`/shop?q=${encodeURIComponent(q)}`);
+  }
 
   const navLinks = [
     { href: "/", label: "Home" },
@@ -63,15 +106,6 @@ export function Navbar() {
     if (href === "/") return pathname === "/";
     return pathname.startsWith(href.split("?")[0]);
   };
-
-  function handleSearch(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const q = searchQuery.trim();
-    if (!q) return;
-    setMenuOpen(false);
-    setCatMenuOpen(false);
-    router.push(`/shop?q=${encodeURIComponent(q)}`);
-  }
 
   async function handleSignOut() {
     await signOut();
@@ -293,7 +327,7 @@ export function Navbar() {
             {/* Mobile menu toggle */}
             <button
               className="md:hidden p-2 rounded-full transition-all duration-200 hover:bg-[rgba(201,146,42,0.1)] text-[var(--text-secondary)]"
-              onClick={() => setMenuOpen(!menuOpen)}
+              onClick={() => { setMenuOpen(!menuOpen); setMobileSearchOpen(false); }}
               aria-label={menuOpen ? "Close menu" : "Open menu"}
               aria-expanded={menuOpen}
             >
@@ -302,23 +336,79 @@ export function Navbar() {
           </div>
         </div>
 
-        {/* Mobile search — always visible, not tucked behind the menu */}
-        <div className="md:hidden py-3">
-          <form onSubmit={handleSearch} className="relative" role="search">
-            <Search
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
-              style={{ color: "var(--text-muted)" }}
-            />
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search products..."
-              aria-label="Search products"
-              className="w-full h-10 pl-10 pr-3 rounded-full text-sm font-semibold border outline-none transition-colors focus:border-[var(--gold-primary)]"
-              style={{ borderColor: "var(--border-color)", background: "var(--bg-card)", color: "var(--text-primary)" }}
-            />
-          </form>
+        {/* Mobile search — icon that expands into a suggestive search */}
+        <div className="md:hidden py-3" ref={searchRef}>
+          {mobileSearchOpen ? (
+            <div className="relative">
+              <form onSubmit={handleSearch} className="relative" role="search">
+                <Search
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
+                  style={{ color: "var(--text-muted)" }}
+                />
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Escape") closeMobileSearch(); }}
+                  placeholder="Search products..."
+                  aria-label="Search products"
+                  autoFocus
+                  className="w-full h-10 pl-10 pr-10 rounded-full text-sm font-semibold border outline-none transition-colors focus:border-[var(--gold-primary)]"
+                  style={{ borderColor: "var(--border-color)", background: "var(--bg-card)", color: "var(--text-primary)" }}
+                />
+              </form>
+              <button
+                type="button"
+                onClick={closeMobileSearch}
+                aria-label="Close search"
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full transition-colors hover:bg-[rgba(201,146,42,0.12)]"
+                style={{ color: "var(--text-muted)" }}
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              {suggestions.length > 0 && (
+                <ul
+                  className="absolute left-0 right-0 top-full mt-2 z-50 rounded-2xl border shadow-lg overflow-hidden animate-slide-up"
+                  style={{ background: "var(--bg-card)", borderColor: "var(--border-color)" }}
+                  role="listbox"
+                  aria-label="Search suggestions"
+                >
+                  {suggestions.map((p) => (
+                    <li key={p.id}>
+                      <Link
+                        href={`/product/${p.id}`}
+                        onClick={closeMobileSearch}
+                        className="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold transition-colors hover:bg-[rgba(201,146,42,0.08)]"
+                        style={{ color: "var(--text-secondary)" }}
+                      >
+                        <span
+                          className="relative w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 border"
+                          style={{ borderColor: "var(--border-color)", background: "var(--bg-secondary)" }}
+                        >
+                          <Image src={p.image} alt="" fill sizes="32px" loading="lazy" className="object-cover" />
+                        </span>
+                        <span className="truncate">{p.name}</span>
+                        <span className="ml-auto text-xs font-bold flex-shrink-0" style={{ color: "var(--gold-primary)" }}>
+                          {formatPrice(p.price)}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={openMobileSearch}
+              aria-label="Open search"
+              className="flex w-full h-10 items-center justify-center rounded-full border transition-colors hover:border-[var(--gold-primary)]"
+              style={{ borderColor: "var(--border-color)", background: "var(--bg-card)" }}
+            >
+              <Search className="w-5 h-5" style={{ color: "var(--text-muted)" }} />
+            </button>
+          )}
         </div>
 
         {/* Mobile menu */}
