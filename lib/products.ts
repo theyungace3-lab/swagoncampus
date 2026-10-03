@@ -151,7 +151,7 @@ export const CATEGORIES: { id: Category; label: string; description: string; sec
   { id: "jackets-hoodies", label: "Jackets & Hoodies", description: "Jackets, hoodies & sweatshirts", section: "men" },
   { id: "trousers-jeans", label: "Trousers & Jeans", description: "Jeans, trousers & joggers", section: "men" },
   { id: "footwear", label: "Footwear", description: "Sneakers & shoes", section: "men" },
-  { id: "watches-accessories", label: "Wristwatches & Accessories", description: "Watches, chains & more", section: "men" },
+  { id: "watches-accessories", label: "Wristwatches, Caps & Accessories", description: "Watches, caps, chains & more", section: "men" },
   { id: "corporate-dresses", label: "Corporate Dresses", description: "Formal & office wear", section: "men" },
   { id: "campus-casual", label: "Campus Casual", description: "Graphic tees, oversized hoodies, denim & cargos", section: "women" },
   { id: "going-out", label: "Going Out & Social", description: "Bodysuits, crop tops, corsets, skirts & dresses", section: "women" },
