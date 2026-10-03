@@ -23,8 +23,7 @@ export function SiteChrome({ children }: { children: ReactNode }) {
   return (
     <>
       <Navbar />
-      {/* pt-32 clears the fixed navbar plus the always-visible mobile search row (h-16 + py-3 + h-10 = 128px) */}
-      <main className="flex-1 pt-32 md:pt-16">{children}</main>
+      <main className="flex-1 pt-16">{children}</main>
       <Footer />
       <FloatingCartButton />
       <CartDrawer />

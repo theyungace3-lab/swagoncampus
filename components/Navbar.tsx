@@ -27,9 +27,10 @@ export function Navbar() {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [scrolled, setScrolled]       = useState(false);
   const [mounted, setMounted]         = useState(false);
-  const userMenuRef = useRef<HTMLDivElement>(null);
-  const catMenuRef  = useRef<HTMLDivElement>(null);
-  const searchRef   = useRef<HTMLDivElement>(null);
+  const userMenuRef  = useRef<HTMLDivElement>(null);
+  const catMenuRef   = useRef<HTMLDivElement>(null);
+  const searchRef    = useRef<HTMLDivElement>(null);
+  const searchBtnRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -48,7 +49,10 @@ export function Navbar() {
       if (catMenuRef.current && !catMenuRef.current.contains(e.target as Node)) {
         setCatMenuOpen(false);
       }
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+      if (
+        searchRef.current && !searchRef.current.contains(e.target as Node) &&
+        (!searchBtnRef.current || !searchBtnRef.current.contains(e.target as Node))
+      ) {
         setMobileSearchOpen(false);
       }
     }
@@ -242,6 +246,18 @@ export function Navbar() {
               </button>
             )}
 
+            {/* Mobile search toggle — beside dark mode */}
+            <button
+              ref={searchBtnRef}
+              type="button"
+              onClick={() => (mobileSearchOpen ? closeMobileSearch() : openMobileSearch())}
+              className="md:hidden p-2 rounded-full transition-all duration-200 hover:bg-[rgba(201,146,42,0.1)] text-[var(--text-secondary)] hover:text-[var(--gold-primary)]"
+              aria-label={mobileSearchOpen ? "Close search" : "Open search"}
+              aria-expanded={mobileSearchOpen}
+            >
+              {mobileSearchOpen ? <X className="w-5 h-5" /> : <Search className="w-5 h-5" />}
+            </button>
+
             {/* Cart */}
             <button
               onClick={toggleCart}
@@ -336,9 +352,9 @@ export function Navbar() {
           </div>
         </div>
 
-        {/* Mobile search — icon that expands into a suggestive search */}
-        <div className="md:hidden py-3" ref={searchRef}>
-          {mobileSearchOpen ? (
+        {/* Mobile search — expands from the search icon beside dark mode */}
+        {mobileSearchOpen && (
+          <div className="md:hidden py-3" ref={searchRef}>
             <div className="relative">
               <form onSubmit={handleSearch} className="relative" role="search">
                 <Search
@@ -353,19 +369,10 @@ export function Navbar() {
                   placeholder="Search products..."
                   aria-label="Search products"
                   autoFocus
-                  className="w-full h-10 pl-10 pr-10 rounded-full text-sm font-semibold border outline-none transition-colors focus:border-[var(--gold-primary)]"
+                  className="w-full h-10 pl-10 pr-3 rounded-full text-sm font-semibold border outline-none transition-colors focus:border-[var(--gold-primary)]"
                   style={{ borderColor: "var(--border-color)", background: "var(--bg-card)", color: "var(--text-primary)" }}
                 />
               </form>
-              <button
-                type="button"
-                onClick={closeMobileSearch}
-                aria-label="Close search"
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full transition-colors hover:bg-[rgba(201,146,42,0.12)]"
-                style={{ color: "var(--text-muted)" }}
-              >
-                <X className="w-4 h-4" />
-              </button>
 
               {suggestions.length > 0 && (
                 <ul
@@ -398,18 +405,8 @@ export function Navbar() {
                 </ul>
               )}
             </div>
-          ) : (
-            <button
-              type="button"
-              onClick={openMobileSearch}
-              aria-label="Open search"
-              className="flex w-full h-10 items-center justify-center rounded-full border transition-colors hover:border-[var(--gold-primary)]"
-              style={{ borderColor: "var(--border-color)", background: "var(--bg-card)" }}
-            >
-              <Search className="w-5 h-5" style={{ color: "var(--text-muted)" }} />
-            </button>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Mobile menu */}
         {menuOpen && (
