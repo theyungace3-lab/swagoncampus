@@ -20,6 +20,7 @@ export function Navbar() {
   const [menuOpen, setMenuOpen]       = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [catMenuOpen, setCatMenuOpen]   = useState(false);
+  const [openSection, setOpenSection]   = useState<"men" | "women" | null>(null);
   const [searchQuery, setSearchQuery]   = useState("");
   const [scrolled, setScrolled]       = useState(false);
   const [mounted, setMounted]         = useState(false);
@@ -54,8 +55,8 @@ export function Navbar() {
   ];
 
   const categoryGroups = [
-    { name: "For Men", cats: CATEGORY_SECTIONS.men },
-    { name: "For Women", cats: CATEGORY_SECTIONS.women },
+    { key: "men" as const, label: "Men's Clothing", cats: CATEGORY_SECTIONS.men },
+    { key: "women" as const, label: "Women's Clothing", cats: CATEGORY_SECTIONS.women },
   ];
 
   const isActive = (href: string) => {
@@ -114,7 +115,7 @@ export function Navbar() {
             {/* Categories dropdown */}
             <div className="relative" ref={catMenuRef}>
               <button
-                onClick={() => setCatMenuOpen(!catMenuOpen)}
+                onClick={() => { setCatMenuOpen(!catMenuOpen); setOpenSection(null); }}
                 className={`flex items-center gap-1 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${
                   catMenuOpen
                     ? "btn-gold text-xs px-4 py-2"
@@ -131,34 +132,45 @@ export function Navbar() {
 
               {catMenuOpen && (
                 <div
-                  className="absolute right-0 top-full mt-2 w-64 rounded-2xl border shadow-lg overflow-hidden p-2 animate-slide-up"
+                  className="absolute right-0 top-full mt-2 w-72 rounded-2xl border shadow-lg overflow-hidden p-2 animate-slide-up"
                   style={{ background: "var(--bg-card)", borderColor: "var(--border-color)" }}
                   role="menu"
                   aria-label="Product categories"
                 >
-                  {categoryGroups.map((group, gi) => (
-                    <div key={group.name}>
-                      {gi > 0 && (
-                        <hr className="my-1" style={{ borderColor: "var(--border-color)" }} />
-                      )}
-                      <p
-                        className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest"
-                        style={{ color: "var(--text-muted)" }}
+                  {categoryGroups.map((group) => (
+                    <div key={group.key}>
+                      <button
+                        onClick={() => setOpenSection(openSection === group.key ? null : group.key)}
+                        className="flex w-full items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold text-[var(--text-secondary)] hover:bg-[rgba(201,146,42,0.10)] hover:text-[var(--gold-primary)] transition-colors"
+                        role="menuitem"
+                        aria-haspopup="true"
+                        aria-expanded={openSection === group.key}
                       >
-                        {group.name}
-                      </p>
-                      {group.cats.map((cat) => (
-                        <Link
-                          key={cat.id}
-                          href={`/shop?category=${cat.id}`}
-                          onClick={() => setCatMenuOpen(false)}
-                          role="menuitem"
-                          className="flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold text-[var(--text-secondary)] hover:bg-[rgba(201,146,42,0.10)] hover:text-[var(--gold-primary)] transition-colors"
-                        >
-                          {cat.label}
-                          <ChevronDown className="w-3.5 h-3.5 -rotate-90" style={{ color: "var(--gold-primary)" }} />
-                        </Link>
-                      ))}
+                        {group.label}
+                        <ChevronDown
+                          className={`w-3.5 h-3.5 transition-transform duration-200 ${openSection === group.key ? "rotate-180" : ""}`}
+                          style={{ color: "var(--gold-primary)" }}
+                        />
+                      </button>
+                      {openSection === group.key && (
+                        <div className="flex flex-col gap-0.5 pb-1">
+                          {group.cats.map((cat) => (
+                            <Link
+                              key={cat.id}
+                              href={`/shop?category=${cat.id}`}
+                              onClick={() => { setCatMenuOpen(false); setOpenSection(null); }}
+                              role="menuitem"
+                              className="flex items-center gap-2 py-2 pl-6 pr-3 rounded-xl text-sm font-medium text-[var(--text-secondary)] hover:bg-[rgba(201,146,42,0.10)] hover:text-[var(--gold-primary)] transition-colors"
+                            >
+                              <span
+                                className="w-1 h-1 rounded-full flex-shrink-0"
+                                style={{ background: "var(--gold-primary)" }}
+                              />
+                              <span className="leading-snug">{cat.label}</span>
+                            </Link>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -290,6 +302,25 @@ export function Navbar() {
           </div>
         </div>
 
+        {/* Mobile search — always visible, not tucked behind the menu */}
+        <div className="md:hidden py-3">
+          <form onSubmit={handleSearch} className="relative" role="search">
+            <Search
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
+              style={{ color: "var(--text-muted)" }}
+            />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search products..."
+              aria-label="Search products"
+              className="w-full h-10 pl-10 pr-3 rounded-full text-sm font-semibold border outline-none transition-colors focus:border-[var(--gold-primary)]"
+              style={{ borderColor: "var(--border-color)", background: "var(--bg-card)", color: "var(--text-primary)" }}
+            />
+          </form>
+        </div>
+
         {/* Mobile menu */}
         {menuOpen && (
           <div className="md:hidden pb-4 border-t border-[var(--border-color)] mt-1 animate-slide-up" role="navigation" aria-label="Mobile navigation">
@@ -306,23 +337,6 @@ export function Navbar() {
                 </Link>
               ))}
 
-              {/* Mobile search */}
-              <form onSubmit={handleSearch} className="relative px-4 pt-3" role="search">
-                <Search
-                  className="absolute left-7 top-1/2 translate-y-[2px] w-4 h-4 pointer-events-none"
-                  style={{ color: "var(--text-muted)" }}
-                />
-                <input
-                  type="search"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search products..."
-                  aria-label="Search products"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm font-semibold border outline-none transition-colors focus:border-[var(--gold-primary)]"
-                  style={{ borderColor: "var(--border-color)", background: "var(--bg-card)", color: "var(--text-primary)" }}
-                />
-              </form>
-
               {/* Categories */}
               <div className="px-4 pt-3 pb-1">
                 <p
@@ -333,23 +347,37 @@ export function Navbar() {
                 </p>
                 <div className="flex flex-col gap-1">
                   {categoryGroups.map((group) => (
-                    <div key={group.name} className="mt-1">
-                      <p
-                        className="px-4 py-1 text-[10px] font-bold uppercase tracking-widest"
-                        style={{ color: "var(--text-muted)" }}
+                    <div key={group.key} className="mt-1">
+                      <button
+                        onClick={() => setOpenSection(openSection === group.key ? null : group.key)}
+                        className="flex w-full items-center justify-between px-4 py-2.5 rounded-xl text-sm font-semibold text-[var(--text-secondary)] hover:bg-[rgba(201,146,42,0.08)] hover:text-[var(--gold-primary)] transition-all"
+                        aria-haspopup="true"
+                        aria-expanded={openSection === group.key}
                       >
-                        {group.name}
-                      </p>
-                      {group.cats.map((cat) => (
-                        <Link
-                          key={cat.id}
-                          href={`/shop?category=${cat.id}`}
-                          onClick={() => setMenuOpen(false)}
-                          className="block px-4 py-2.5 rounded-xl text-sm font-semibold text-[var(--text-secondary)] hover:bg-[rgba(201,146,42,0.08)] hover:text-[var(--gold-primary)] transition-all"
-                        >
-                          {cat.label}
-                        </Link>
-                      ))}
+                        {group.label}
+                        <ChevronDown
+                          className={`w-4 h-4 transition-transform duration-200 ${openSection === group.key ? "rotate-180" : ""}`}
+                          style={{ color: "var(--gold-primary)" }}
+                        />
+                      </button>
+                      {openSection === group.key && (
+                        <div className="flex flex-col gap-0.5 py-1">
+                          {group.cats.map((cat) => (
+                            <Link
+                              key={cat.id}
+                              href={`/shop?category=${cat.id}`}
+                              onClick={() => { setMenuOpen(false); setOpenSection(null); }}
+                              className="flex items-center gap-2 pl-7 pr-4 py-2.5 rounded-xl text-sm font-medium text-[var(--text-secondary)] hover:bg-[rgba(201,146,42,0.08)] hover:text-[var(--gold-primary)] transition-all"
+                            >
+                              <span
+                                className="w-1 h-1 rounded-full flex-shrink-0"
+                                style={{ background: "var(--gold-primary)" }}
+                              />
+                              <span className="leading-snug">{cat.label}</span>
+                            </Link>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
