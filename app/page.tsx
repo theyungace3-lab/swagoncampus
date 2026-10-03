@@ -8,7 +8,8 @@ export default function HomePage() {
     <>
       <PromoBar />
       <HeroSection />
-      <CategorySection />
+      <CategorySection section="men" heading="Shop for Men" />
+      <CategorySection section="women" heading="Shop for Women" />
       <FeaturedProducts />
     </>
   );

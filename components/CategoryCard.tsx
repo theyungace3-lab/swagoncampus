@@ -16,6 +16,12 @@ const CATEGORY_IMAGES: Record<Category, string> = {
   footwear: "/categories/footwear.jpg",
   "watches-accessories": "/categories/watches-accessories.jpg",
   "corporate-dresses": "/categories/corporate-dresses.jpg",
+  "campus-casual": "/categories/campus-casual.jpg",
+  "going-out": "/categories/going-out.jpg",
+  athleisure: "/categories/athleisure.jpg",
+  "smart-casual": "/categories/smart-casual.jpg",
+  "womens-outerwear": "/categories/womens-outerwear.jpg",
+  "accessories-footwear": "/categories/accessories-footwear.jpg",
 };
 
 export function CategoryCard({ id, label, description }: CategoryCardProps) {

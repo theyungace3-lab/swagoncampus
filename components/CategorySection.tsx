@@ -1,12 +1,22 @@
 import { CategoryCard } from "@/components/CategoryCard";
 import { Reveal } from "@/components/Reveal";
-import { CATEGORIES } from "@/lib/products";
+import { CATEGORY_SECTIONS } from "@/lib/products";
+import { Section } from "@/lib/types";
 
-export function CategorySection() {
+interface CategorySectionProps {
+  section: Section;
+  heading: string;
+}
+
+export function CategorySection({ section, heading }: CategorySectionProps) {
+  const categories = CATEGORY_SECTIONS[section];
+  const headingId = `${section}-categories-heading`;
+
   return (
     <section
+      id={`shop-${section}`}
       className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16"
-      aria-labelledby="categories-heading"
+      aria-labelledby={headingId}
     >
       {/* Section Header */}
       <Reveal>
@@ -19,11 +29,11 @@ export function CategorySection() {
               Browse
             </p>
             <h2
-              id="categories-heading"
+              id={headingId}
               className="text-3xl sm:text-4xl font-black"
               style={{ color: "var(--text-primary)" }}
             >
-              Shop by Category
+              {heading}
             </h2>
           </div>
         </div>
@@ -34,7 +44,7 @@ export function CategorySection() {
 
       {/* Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-        {CATEGORIES.map((cat, index) => (
+        {categories.map((cat, index) => (
           <Reveal key={cat.id} delay={index * 80} className="h-full">
             <CategoryCard
               id={cat.id}

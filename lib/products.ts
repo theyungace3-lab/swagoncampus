@@ -1,4 +1,4 @@
-import { Product, Category } from "./types";
+import { Product, Category, Section } from "./types";
 
 export const SAMPLE_PRODUCTS: Product[] = [
   {
@@ -146,14 +146,25 @@ export const SAMPLE_PRODUCTS: Product[] = [
   },
 ];
 
-export const CATEGORIES: { id: Category; label: string; description: string }[] = [
-  { id: "tops", label: "Tops", description: "T-shirts, shirts & more" },
-  { id: "jackets-hoodies", label: "Jackets & Hoodies", description: "Jackets, hoodies & sweatshirts" },
-  { id: "trousers-jeans", label: "Trousers & Jeans", description: "Jeans, trousers & joggers" },
-  { id: "footwear", label: "Footwear", description: "Sneakers & shoes" },
-  { id: "watches-accessories", label: "Wristwatches & Accessories", description: "Watches, chains & more" },
-  { id: "corporate-dresses", label: "Corporate Dresses", description: "Formal & office wear" },
+export const CATEGORIES: { id: Category; label: string; description: string; section: Section }[] = [
+  { id: "tops", label: "Tops", description: "T-shirts, shirts & more", section: "men" },
+  { id: "jackets-hoodies", label: "Jackets & Hoodies", description: "Jackets, hoodies & sweatshirts", section: "men" },
+  { id: "trousers-jeans", label: "Trousers & Jeans", description: "Jeans, trousers & joggers", section: "men" },
+  { id: "footwear", label: "Footwear", description: "Sneakers & shoes", section: "men" },
+  { id: "watches-accessories", label: "Wristwatches & Accessories", description: "Watches, chains & more", section: "men" },
+  { id: "corporate-dresses", label: "Corporate Dresses", description: "Formal & office wear", section: "men" },
+  { id: "campus-casual", label: "Campus Casual", description: "Graphic tees, oversized hoodies, denim & cargos", section: "women" },
+  { id: "going-out", label: "Going Out & Social", description: "Bodysuits, crop tops, corsets, skirts & dresses", section: "women" },
+  { id: "athleisure", label: "Athleisure & Loungewear", description: "Leggings, biker shorts, sports bras & sweat sets", section: "women" },
+  { id: "smart-casual", label: "Smart Casual & Career", description: "Blazers, dress trousers, slip dresses & button-downs", section: "women" },
+  { id: "womens-outerwear", label: "Outerwear", description: "Denim & faux-leather jackets, puffers & trench coats", section: "women" },
+  { id: "accessories-footwear", label: "Accessories & Footwear", description: "Sneakers, boots, totes, backpacks & jewelry", section: "women" },
 ];
+
+export const CATEGORY_SECTIONS: Record<Section, typeof CATEGORIES> = {
+  men: CATEGORIES.filter((c) => c.section === "men"),
+  women: CATEGORIES.filter((c) => c.section === "women"),
+};
 
 // Legacy database values → current category
 const LEGACY_CATEGORY_MAP: Record<string, Category> = {

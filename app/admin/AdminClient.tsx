@@ -10,7 +10,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { CATEGORIES, formatPrice, normalizeCategory, getCategoryLabel } from "@/lib/products";
+import { CATEGORY_SECTIONS, formatPrice, normalizeCategory, getCategoryLabel } from "@/lib/products";
 import { Category } from "@/lib/types";
 import type { DbProduct, DbDiscount } from "@/lib/supabase/types";
 
@@ -256,7 +256,12 @@ export function AdminClient() {
           {/* Category */}
           <Field label="Category" required>
             <select value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value as Category }))} className="admin-input">
-              {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+              <optgroup label="Men">
+                {CATEGORY_SECTIONS.men.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+              </optgroup>
+              <optgroup label="Women">
+                {CATEGORY_SECTIONS.women.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+              </optgroup>
             </select>
           </Field>
 

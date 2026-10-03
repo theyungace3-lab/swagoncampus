@@ -18,7 +18,15 @@ export type Category =
   | "trousers-jeans"
   | "footwear"
   | "watches-accessories"
-  | "corporate-dresses";
+  | "corporate-dresses"
+  | "campus-casual"
+  | "going-out"
+  | "athleisure"
+  | "smart-casual"
+  | "womens-outerwear"
+  | "accessories-footwear";
+
+export type Section = "men" | "women";
 
 // Legacy category values that may still exist in the database
 export type LegacyCategory =

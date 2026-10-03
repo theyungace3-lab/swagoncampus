@@ -6,7 +6,7 @@ import { SlidersHorizontal, X } from "lucide-react";
 import { ProductCard } from "@/components/ProductCard";
 import { Reveal } from "@/components/Reveal";
 import { useProducts } from "@/contexts/ProductsContext";
-import { CATEGORIES, normalizeCategory } from "@/lib/products";
+import { CATEGORIES, CATEGORY_SECTIONS, normalizeCategory } from "@/lib/products";
 import { Category } from "@/lib/types";
 
 const SORT_OPTIONS = [
@@ -44,7 +44,7 @@ export function ShopClient() {
     let result = [...products];
 
     if (activeCategory !== "all") {
-      result = result.filter((p) => p.category === activeCategory);
+      result = result.filter((p) => normalizeCategory(p.category) === activeCategory);
     }
 
     switch (sort) {
@@ -124,16 +124,26 @@ export function ShopClient() {
           >
             All
           </button>
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => selectCategory(cat.id)}
-              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-200 ${
-                activeCategory === cat.id ? "btn-gold" : "btn-ghost-gold"
-              }`}
-            >
-              {cat.label}
-            </button>
+          {(["men", "women"] as const).map((section) => (
+            <div key={section} className="flex flex-wrap items-center gap-2" role="group" aria-label={`${section} categories`}>
+              <span
+                className="text-[10px] font-bold uppercase tracking-widest pl-1"
+                style={{ color: "var(--text-muted)" }}
+              >
+                {section === "men" ? "Men:" : "Women:"}
+              </span>
+              {CATEGORY_SECTIONS[section].map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => selectCategory(cat.id)}
+                  className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-200 ${
+                    activeCategory === cat.id ? "btn-gold" : "btn-ghost-gold"
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
           ))}
         </div>
 

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { MapPin } from "lucide-react";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { BrandMark } from "@/components/BrandMark";
+import { CATEGORY_SECTIONS } from "@/lib/products";
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -41,26 +42,42 @@ export function Footer() {
               Shop
             </h3>
             <ul className="space-y-2">
-              {[
-                { label: "All Items", href: "/shop" },
-                { label: "Tops", href: "/shop?category=tops" },
-                { label: "Jackets & Hoodies", href: "/shop?category=jackets-hoodies" },
-                { label: "Trousers & Jeans", href: "/shop?category=trousers-jeans" },
-                { label: "Footwear", href: "/shop?category=footwear" },
-                { label: "Wristwatches & Accessories", href: "/shop?category=watches-accessories" },
-                { label: "Corporate Dresses", href: "/shop?category=corporate-dresses" },
-              ].map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="text-sm transition-colors duration-200 hover:text-[var(--gold-primary)]"
-                    style={{ color: "var(--text-muted)" }}
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
+              <li>
+                <Link
+                  href="/shop"
+                  className="text-sm transition-colors duration-200 hover:text-[var(--gold-primary)]"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  All Items
+                </Link>
+              </li>
             </ul>
+            {([
+              { name: "For Men", key: "men" },
+              { name: "For Women", key: "women" },
+            ] as const).map((group) => (
+              <div key={group.key} className="mt-4">
+                <p
+                  className="text-[11px] font-bold uppercase tracking-widest mb-2"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  {group.name}
+                </p>
+                <ul className="space-y-2">
+                  {CATEGORY_SECTIONS[group.key].map((cat) => (
+                    <li key={cat.id}>
+                      <Link
+                        href={`/shop?category=${cat.id}`}
+                        className="text-sm transition-colors duration-200 hover:text-[var(--gold-primary)]"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        {cat.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
 
           {/* Contact */}

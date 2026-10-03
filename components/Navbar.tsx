@@ -8,7 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ShoppingCart, Sun, Moon, Menu, X, ShieldCheck, User, LogOut, ChevronDown } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { BrandMark } from "@/components/BrandMark";
-import { CATEGORIES } from "@/lib/products";
+import { CATEGORY_SECTIONS } from "@/lib/products";
 
 export function Navbar() {
   const pathname          = usePathname();
@@ -52,10 +52,10 @@ export function Navbar() {
     { href: "/shop", label: "Shop" },
   ];
 
-  const categoryLinks = CATEGORIES.map((cat) => ({
-    href: `/shop?category=${cat.id}`,
-    label: cat.label,
-  }));
+  const categoryGroups = [
+    { name: "For Men", cats: CATEGORY_SECTIONS.men },
+    { name: "For Women", cats: CATEGORY_SECTIONS.women },
+  ];
 
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
@@ -126,17 +126,30 @@ export function Navbar() {
                   role="menu"
                   aria-label="Product categories"
                 >
-                  {categoryLinks.map((link) => (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      onClick={() => setCatMenuOpen(false)}
-                      role="menuitem"
-                      className="flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold text-[var(--text-secondary)] hover:bg-[rgba(201,146,42,0.10)] hover:text-[var(--gold-primary)] transition-colors"
-                    >
-                      {link.label}
-                      <ChevronDown className="w-3.5 h-3.5 -rotate-90" style={{ color: "var(--gold-primary)" }} />
-                    </Link>
+                  {categoryGroups.map((group, gi) => (
+                    <div key={group.name}>
+                      {gi > 0 && (
+                        <hr className="my-1" style={{ borderColor: "var(--border-color)" }} />
+                      )}
+                      <p
+                        className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        {group.name}
+                      </p>
+                      {group.cats.map((cat) => (
+                        <Link
+                          key={cat.id}
+                          href={`/shop?category=${cat.id}`}
+                          onClick={() => setCatMenuOpen(false)}
+                          role="menuitem"
+                          className="flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold text-[var(--text-secondary)] hover:bg-[rgba(201,146,42,0.10)] hover:text-[var(--gold-primary)] transition-colors"
+                        >
+                          {cat.label}
+                          <ChevronDown className="w-3.5 h-3.5 -rotate-90" style={{ color: "var(--gold-primary)" }} />
+                        </Link>
+                      ))}
+                    </div>
                   ))}
                 </div>
               )}
@@ -275,15 +288,25 @@ export function Navbar() {
                   Categories
                 </p>
                 <div className="flex flex-col gap-1">
-                  {categoryLinks.map((link) => (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      onClick={() => setMenuOpen(false)}
-                      className="px-4 py-2.5 rounded-xl text-sm font-semibold text-[var(--text-secondary)] hover:bg-[rgba(201,146,42,0.08)] hover:text-[var(--gold-primary)] transition-all"
-                    >
-                      {link.label}
-                    </Link>
+                  {categoryGroups.map((group) => (
+                    <div key={group.name} className="mt-1">
+                      <p
+                        className="px-4 py-1 text-[10px] font-bold uppercase tracking-widest"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        {group.name}
+                      </p>
+                      {group.cats.map((cat) => (
+                        <Link
+                          key={cat.id}
+                          href={`/shop?category=${cat.id}`}
+                          onClick={() => setMenuOpen(false)}
+                          className="block px-4 py-2.5 rounded-xl text-sm font-semibold text-[var(--text-secondary)] hover:bg-[rgba(201,146,42,0.08)] hover:text-[var(--gold-primary)] transition-all"
+                        >
+                          {cat.label}
+                        </Link>
+                      ))}
+                    </div>
                   ))}
                 </div>
               </div>
