@@ -1,358 +1,108 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { ArrowLeft, Check, Eye, EyeOff, KeyRound, Mail } from "lucide-react";
-import type { Session } from "@supabase/supabase-js";
-import { BrandMark } from "@/components/BrandMark";
-import { OtpInput } from "@/components/OtpInput";
+import { useRef, useState, type FormEvent } from "react";
+import { Check, Eye, EyeOff } from "lucide-react";
+import { AuthScreen } from "@/components/AuthScreen";
+import { EmailCodeForm } from "@/components/EmailCodeForm";
+import { authErrorMessage } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/client";
 
-type Step = "request" | "code" | "password" | "done";
-
-const RESEND_SECONDS = 60;
-
 export function ForgotPasswordClient() {
-  const searchParams = useSearchParams();
-  const wantsResetLink = searchParams.get("step") === "reset";
-
-  const [step, setStep]         = useState<Step>("request");
-  const [email, setEmail]       = useState("");
-  const [code, setCode]         = useState("");
+  const [verifiedUserId, setVerifiedUserId] = useState<string | null>(null);
   const [password, setPassword] = useState("");
-  const [confirm, setConfirm]   = useState("");
-  const [showPw, setShowPw]     = useState(false);
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState("");
-  const [resendIn, setResendIn] = useState(0);
+  const [confirm, setConfirm] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState("");
+  const [signOutWarning, setSignOutWarning] = useState(false);
   const busy = useRef(false);
 
-  // Arriving from the emailed link: the callback already opened a recovery
-  // session, so skip straight to choosing a new password.
-  useEffect(() => {
-    if (!wantsResetLink) return;
-    let active = true;
-    createClient()
-      .auth.getSession()
-      .then(({ data }: { data: { session: Session | null } }) => {
-        if (!active) return;
-        if (data.session) {
-          setStep("password");
-        } else {
-          setError("That reset link has expired. Request a new code below.");
-        }
-      });
-    return () => {
-      active = false;
-    };
-  }, [wantsResetLink]);
-
-  // Resend cooldown, mirroring Supabase's 60-second per-user window.
-  useEffect(() => {
-    if (resendIn <= 0) return;
-    const timer = setTimeout(() => setResendIn((seconds) => seconds - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [resendIn]);
-
-  async function sendCode(e?: React.FormEvent) {
-    e?.preventDefault();
-    if (busy.current || resendIn > 0) return;
-    if (!email.trim()) {
-      setError("Enter your email address first.");
-      return;
-    }
-
+  async function savePassword(event: FormEvent) {
+    event.preventDefault();
+    if (busy.current || !verifiedUserId) return;
+    if (password.length < 8) { setError("Use a password with at least 8 characters."); return; }
+    if (password !== confirm) { setError("Passwords do not match."); return; }
     busy.current = true;
-    setError("");
     setLoading(true);
-
-    const { error: sendError } = await createClient().auth.resetPasswordForEmail(email.trim(), {
-      // Also supports clicking the emailed link, which returns to this page.
-      redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent("/auth/forgot-password?step=reset")}`,
-    });
-
-    setLoading(false);
-    busy.current = false;
-
-    if (sendError) {
-      setError(sendError.message);
-      return;
-    }
-
-    setCode("");
-    setStep("code");
-    setResendIn(RESEND_SECONDS);
-  }
-
-  async function verifyCode(token: string) {
-    if (busy.current || token.length !== 6) return;
-    busy.current = true;
     setError("");
-    setLoading(true);
-
-    const { error: verifyError } = await createClient().auth.verifyOtp({
-      email: email.trim(),
-      token,
-      type: "recovery",
-    });
-
-    setLoading(false);
-    busy.current = false;
-
-    if (verifyError) {
-      setError(verifyError.message || "That code is incorrect or has expired.");
-      setCode("");
-      return;
+    const auth = createClient().auth;
+    try {
+      // A session restored from cookies (or ?step=reset) is not proof of a fresh
+      // recovery code. Also prevent another tab's login from changing the target.
+      const { data, error: sessionError } = await auth.getUser();
+      if (sessionError || data.user?.id !== verifiedUserId) {
+        setVerifiedUserId(null);
+        setPassword("");
+        setConfirm("");
+        setError("Your recovery session changed or expired. Request a new code.");
+        return;
+      }
+      const { error: updateError } = await auth.updateUser({ password });
+      if (updateError) throw updateError;
+      // Password change succeeded even if revoking other sessions fails offline.
+      try {
+        const { error: signOutError } = await auth.signOut({ scope: "global" });
+        setSignOutWarning(!!signOutError);
+      } catch {
+        setSignOutWarning(true);
+      }
+      setPassword("");
+      setConfirm("");
+      setDone(true);
+    } catch (cause) {
+      setError(authErrorMessage(cause, "update"));
+    } finally {
+      busy.current = false;
+      setLoading(false);
     }
-
-    setStep("password");
   }
-
-  async function savePassword(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-
-    if (password !== confirm) {
-      setError("Passwords do not match.");
-      return;
-    }
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
-      return;
-    }
-
-    setLoading(true);
-    const supabase = createClient();
-    const { error: updateError } = await supabase.auth.updateUser({ password });
-    setLoading(false);
-
-    if (updateError) {
-      setError(updateError.message);
-      return;
-    }
-
-    // Invalidate sessions on any other device that still has the old password.
-    await supabase.auth.signOut({ scope: "global" });
-    setStep("done");
-  }
-
-  const heading = step === "done" ? "All set" : step === "password" ? "Choose a new password" : "Reset your password";
-  const strength = password.length >= 8 && /[A-Z]/.test(password) && /\d/.test(password);
 
   return (
-    <div className="relative min-h-screen lg:flex">
-      {/* ── Background image (wooden hangers): full-screen on mobile, left half on desktop ── */}
-      <div
-        className="absolute inset-0 lg:relative lg:w-1/2 bg-cover bg-center"
-        style={{ backgroundImage: "url('/auth-signin-bg.jpg')" }}
-        aria-hidden="true"
-      >
-        <div className="absolute inset-0 bg-black/50" />
-        <div className="hidden lg:flex absolute inset-0 flex-col items-center justify-center text-center px-12">
-          <BrandMark size={56} className="mb-4 animate-gentle-bounce" />
-          <h2 className="text-4xl font-black text-white leading-tight mb-3">
-            Forgot your<br />
-            <span style={{ color: "#e8b84b" }}>password?</span>
-          </h2>
-          <p className="text-white/70 text-lg">
-            We&apos;ll email you a secure code.<br />
-            No passwords to remember while you wait.
+    <AuthScreen>
+      {done ? (
+        <div className="text-center">
+          <Check className="mx-auto mb-4 h-10 w-10" style={{ color: "var(--gold-primary)" }} aria-hidden="true" />
+          <h1 className="mb-3 text-3xl font-black" style={{ color: "var(--text-primary)" }}>Password updated</h1>
+          <p className="mb-5 text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+            You can now sign in with your new password or an email code.
           </p>
-        </div>
-      </div>
-
-      {/* ── Form ── */}
-      <div className="relative z-10 flex min-h-screen w-full items-center justify-center px-4 py-12 lg:w-1/2 lg:px-6 lg:py-16">
-        <div className="auth-form-surface w-full max-w-md">
-          <div className="flex items-center gap-2 mb-8">
-            <BrandMark size={28} />
-            <span className="text-2xl font-black gold-text">SwagOnCampus</span>
-          </div>
-
-          {step === "done" ? (
-            <div className="text-center">
-              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5" style={{ background: "rgba(201,146,42,0.12)" }}>
-                <Check className="w-8 h-8" style={{ color: "var(--gold-primary)" }} />
-              </div>
-              <h1 className="text-2xl font-black mb-3 gold-text">{heading}</h1>
-              <p className="text-sm leading-relaxed mb-6" style={{ color: "var(--text-muted)" }}>
-                Your password has been updated. Sign in with your new password. Any other
-                device that was still signed in has been logged out.
-              </p>
-              <Link href="/auth/signin" className="btn-gold inline-block px-8 py-3 rounded-full font-bold text-sm">
-                Go to Sign In
-              </Link>
-            </div>
+          {signOutWarning ? (
+            <p role="alert" className="auth-error mb-5 rounded-xl border p-4 text-sm">Your password was saved, but other sessions could not be signed out. Sign out of any shared devices.</p>
           ) : (
-            <>
-              <h1 className="text-3xl font-black mb-2" style={{ color: "var(--text-primary)" }}>
-                {heading}
-              </h1>
-              <p className="text-sm mb-7" style={{ color: "var(--text-muted)" }}>
-                {step === "request" && "Enter your email and we'll send you a 6-digit code."}
-                {step === "code" && `Enter the 6-digit code we sent to ${email.trim()}.`}
-                {step === "password" && "Pick a new password for your account."}
-              </p>
-
-              {step === "request" && (
-                <form onSubmit={sendCode} className="space-y-5" noValidate>
-                  <div>
-                    <label htmlFor="reset-email" className="block text-xs font-bold uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>
-                      Email address
-                    </label>
-                    <input
-                      id="reset-email"
-                      type="email"
-                      autoComplete="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="you@example.com"
-                      className="admin-input"
-                    />
-                  </div>
-
-                  {error && (
-                    <div role="alert" className="px-4 py-3 rounded-xl text-sm text-red-600 bg-red-50 dark:bg-red-900/20 dark:text-red-400 border border-red-200 dark:border-red-800">
-                      {error}
-                    </div>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="btn-gold w-full flex items-center justify-center gap-2 py-3.5 rounded-full font-bold text-sm disabled:opacity-60"
-                  >
-                    <Mail className="w-4 h-4" />
-                    {loading ? "Sending code…" : "Send reset code"}
-                  </button>
-                </form>
-              )}
-
-              {step === "code" && (
-                <div className="space-y-5">
-                  <OtpInput
-                    value={code}
-                    onChange={setCode}
-                    onComplete={(value) => void verifyCode(value)}
-                    disabled={loading}
-                    label="Reset code"
-                  />
-
-                  <button
-                    type="button"
-                    onClick={() => void verifyCode(code)}
-                    disabled={loading || code.length !== 6}
-                    className="btn-gold w-full flex items-center justify-center gap-2 py-3.5 rounded-full font-bold text-sm disabled:opacity-60"
-                  >
-                    <KeyRound className="w-4 h-4" />
-                    {loading ? "Verifying…" : "Verify code"}
-                  </button>
-
-                  <div className="flex items-center justify-between text-xs" style={{ color: "var(--text-muted)" }}>
-                    <button
-                      type="button"
-                      onClick={() => void sendCode()}
-                      disabled={loading || resendIn > 0}
-                      className="font-semibold hover:underline disabled:cursor-not-allowed disabled:opacity-60 disabled:no-underline"
-                      style={{ color: "var(--gold-primary)" }}
-                    >
-                      {resendIn > 0 ? `Resend in ${resendIn}s` : "Resend code"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setStep("request"); setCode(""); setError(""); setResendIn(0); }}
-                      className="font-semibold hover:underline"
-                    >
-                      Use a different email
-                    </button>
-                  </div>
-
-                  {error && (
-                    <div role="alert" className="px-4 py-3 rounded-xl text-sm text-red-600 bg-red-50 dark:bg-red-900/20 dark:text-red-400 border border-red-200 dark:border-red-800">
-                      {error}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {step === "password" && (
-                <form onSubmit={savePassword} className="space-y-5" noValidate>
-                  <div>
-                    <label htmlFor="new-password" className="block text-xs font-bold uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>
-                      New password
-                    </label>
-                    <div className="relative">
-                      <input
-                        id="new-password"
-                        type={showPw ? "text" : "password"}
-                        autoComplete="new-password"
-                        required
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Min. 6 characters"
-                        className="admin-input pr-12"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPw((v) => !v)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1"
-                        style={{ color: "var(--text-muted)" }}
-                        aria-label={showPw ? "Hide password" : "Show password"}
-                      >
-                        {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                    {password && (
-                      <p className={`text-xs mt-1.5 ${strength ? "text-green-500" : "text-amber-500"}`}>
-                        {strength ? "✓ Strong password" : "Add uppercase letters and numbers for a stronger password"}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label htmlFor="confirm-new-password" className="block text-xs font-bold uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>
-                      Confirm password
-                    </label>
-                    <input
-                      id="confirm-new-password"
-                      type={showPw ? "text" : "password"}
-                      autoComplete="new-password"
-                      required
-                      value={confirm}
-                      onChange={(e) => setConfirm(e.target.value)}
-                      placeholder="Repeat your password"
-                      className="admin-input"
-                    />
-                  </div>
-
-                  {error && (
-                    <div role="alert" className="px-4 py-3 rounded-xl text-sm text-red-600 bg-red-50 dark:bg-red-900/20 dark:text-red-400 border border-red-200 dark:border-red-800">
-                      {error}
-                    </div>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="btn-gold w-full flex items-center justify-center gap-2 py-3.5 rounded-full font-bold text-sm disabled:opacity-60"
-                  >
-                    <KeyRound className="w-4 h-4" />
-                    {loading ? "Saving…" : "Set new password"}
-                  </button>
-                </form>
-              )}
-
-              <p className="mt-6 text-center text-xs" style={{ color: "var(--text-muted)" }}>
-                <Link href="/auth/signin" className="inline-flex items-center gap-1 hover:text-[var(--gold-primary)] transition-colors">
-                  <ArrowLeft className="w-3 h-3" /> Back to sign in
-                </Link>
-              </p>
-            </>
+            <p className="mb-5 text-xs leading-relaxed" style={{ color: "var(--text-secondary)" }}>Other sessions cannot refresh. Already issued access tokens can remain valid until they expire.</p>
           )}
+          <Link href="/auth/signin" className="btn-gold inline-flex min-h-12 items-center justify-center rounded-full px-8 py-3 font-bold">Go to sign in</Link>
         </div>
-      </div>
-    </div>
+      ) : (
+        <>
+          <h1 className="mb-2 text-3xl font-black" style={{ color: "var(--text-primary)" }}>{verifiedUserId ? "Choose a new password" : "Reset your password"}</h1>
+          <p className="mb-6 text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>{verifiedUserId ? "Your email is verified. Choose a new password below." : "Enter your account email to receive a six-digit recovery code."}</p>
+          {!verifiedUserId ? (
+            <EmailCodeForm purpose="recovery" onVerified={(session) => { setVerifiedUserId(session.user.id); setError(""); }} />
+          ) : (
+            <form onSubmit={savePassword} className="space-y-5">
+              <div>
+                <label htmlFor="new-password" className="mb-2 block text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>New password</label>
+                <div className="relative">
+                  <input id="new-password" type={showPassword ? "text" : "password"} autoComplete="new-password" minLength={8} required disabled={loading} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="At least 8 characters" className="admin-input pr-12" />
+                  <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Hide password" : "Show password"} className="absolute inset-y-0 right-0 flex w-12 items-center justify-center rounded-r-xl" style={{ color: "var(--text-secondary)" }}>
+                    {showPassword ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label htmlFor="confirm-new-password" className="mb-2 block text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>Confirm password</label>
+                <input id="confirm-new-password" type={showPassword ? "text" : "password"} autoComplete="new-password" minLength={8} required disabled={loading} value={confirm} onChange={(event) => setConfirm(event.target.value)} className="admin-input" />
+              </div>
+              <button type="submit" disabled={loading} className="btn-gold min-h-12 w-full rounded-full px-4 py-3 font-bold disabled:opacity-60">{loading ? "Saving..." : "Set new password"}</button>
+            </form>
+          )}
+          {error && <p role="alert" className="auth-error mt-4 rounded-xl border p-4 text-sm">{error}</p>}
+          <p className="mt-5 text-center text-sm" style={{ color: "var(--text-secondary)" }}><Link href="/auth/signin" className="inline-flex min-h-11 items-center underline underline-offset-4">Back to sign in</Link></p>
+        </>
+      )}
+    </AuthScreen>
   );
 }

@@ -7,9 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test scripts/analytics.test.mjs scripts/vendor.test.mjs",
+    "test": "node --test scripts/analytics.test.mjs scripts/vendor.test.mjs scripts/auth.test.mjs",
     "test:analytics": "node --test scripts/analytics.test.mjs",
-    "test:vendor": "node --test scripts/vendor.test.mjs"
+    "test:vendor": "node --test scripts/vendor.test.mjs",
+    "test:auth": "node --test scripts/auth.test.mjs",
+    "auth:config": "node scripts/configure-auth.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

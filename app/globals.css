@@ -442,13 +442,48 @@ body {
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.otp-box:focus {
+.otp-control:focus-within .otp-box {
   border-color: var(--gold-primary);
   box-shadow: 0 0 0 3px rgba(201, 146, 42, 0.12);
 }
 
-.otp-box:disabled {
-  opacity: 0.6;
+.auth-screen .admin-input {
+  font-size: 1rem;
+}
+
+.auth-screen :is(button, a):focus-visible {
+  outline: 2px solid var(--text-secondary);
+  outline-offset: 4px;
+}
+
+.auth-google-button {
+  border-color: var(--text-muted);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.auth-google-button:hover:not(:disabled) {
+  border-color: var(--gold-primary);
+  box-shadow: var(--shadow-gold);
+}
+
+.auth-error {
+  color: #991b1b;
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
+.dark .auth-error {
+  color: #fecaca;
+  background: #450a0a;
+  border-color: #b91c1c;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-screen :is(.gold-text, .btn-gold) {
+    animation: none;
+    transition: none;
+  }
 }
 
 option {

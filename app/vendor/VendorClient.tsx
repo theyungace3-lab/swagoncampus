@@ -27,14 +27,14 @@ function toFormValues(p: DbProduct): ProductFormValues {
 }
 
 export function VendorClient() {
-  const { user, isVendor, isAdmin, loading: authLoading, signOut } = useAuth();
+  const { user, isVendor, isAdmin, profileError, refreshProfile, loading: authLoading, signOut } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (authLoading) return;
+    if (authLoading || profileError) return;
     if (isAdmin) router.replace("/admin");
     else if (!user || !isVendor) router.replace("/auth/signin?redirect=/vendor");
-  }, [authLoading, user, isVendor, isAdmin, router]);
+  }, [authLoading, user, isVendor, isAdmin, profileError, router]);
 
   const [products, setProducts] = useState<DbProduct[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,6 +62,15 @@ export function VendorClient() {
     })();
     return () => { active = false; };
   }, [isVendor]);
+
+  if (profileError && user && !authLoading) {
+    return (
+      <div className="mx-auto max-w-md px-4 py-12">
+        <p role="alert" className="mb-4 text-sm" style={{ color: "var(--text-primary)" }}>{profileError}</p>
+        <button type="button" onClick={() => void refreshProfile()} className="btn-gold min-h-11 rounded-full px-5 py-2 font-semibold">Retry account loading</button>
+      </div>
+    );
+  }
 
   if (authLoading || !user || !isVendor || isAdmin) {
     return (

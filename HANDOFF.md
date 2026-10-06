@@ -8,39 +8,98 @@ The analytics implementation is complete, deployed to Vercel production, and
 active against the live Supabase project `wmgnwtyhqfazkdbzlewz`. The old plan
 below is archived and must not be followed as an outstanding implementation checklist.
 
-## Email OTP Auth (added 2026-10-06)
+## Email Codes And Google (updated 2026-10-06)
 
-Sign-in and password reset both support a free 6-digit email code. No SMS or
-WhatsApp OTP — those cost money per message.
+The latest auth changes are in the working tree. They are not proof of working
+email delivery: SMTP/templates and the Google provider must be configured in
+Supabase, and real inbox delivery and OAuth login must be verified separately.
 
-- **Sign in** (`/auth/signin`): a Password / Email code toggle. Email code uses
-  `signInWithOtp({ shouldCreateUser: false })` then `verifyOtp({ type: 'email' })`,
-  so it can never create an account as a side effect.
-- **Forgot password** (`/auth/forgot-password`): email → 6-digit code →
-  new password. Uses `resetPasswordForEmail` → `verifyOtp({ type: 'recovery' })`
-  → `updateUser({ password })`, then `signOut({ scope: 'global' })` so any other
-  signed-in device with the old password is invalidated. The emailed link also
-  works: it returns via `/auth/callback` to the same page. An expired or reused
-  link falls back to the request step with a clear message.
-- Shared `components/OtpInput.tsx` (6 boxes, paste, arrows, auto-submit on the
-  sixth digit) and a 60-second resend cooldown matching Supabase's per-user window.
+### Findings
 
-### REQUIRED Supabase dashboard config for OTP
+- The previous signup called password `signUp()` and always displayed a message
+  about a confirmation email. The live project's public Auth settings reported
+  `mailer_autoconfirm=true`, so that request could create a session without sending
+  confirmation. The UI message did not prove that an email had been sent.
+- The live Google provider was disabled. No Gmail App Password, Google OAuth
+  credentials, or Supabase management token were available locally during the audit.
+- A project service-role key cannot configure SMTP or OAuth providers. Do not try
+  to use it as a Supabase Management API token.
 
-The code is not in the email template by default — only a link. **Add the token
-or the OTP screens will have nothing to verify.**
+### Implemented Flow
 
-1. **Authentication → Emails → Magic Link**: include `{{ .Token }}`
-   (keep `{{ .ConfirmationURL }}` too if you want both).
-2. **Authentication → Emails → Reset Password**: include `{{ .Token }}`.
-3. **Authentication → Providers → Email**: confirm the OTP length is 6 (default).
-4. **Authentication → URL Configuration**: Site URL `https://swagoncampus.vercel.app`
-   and Redirect URLs `https://swagoncampus.vercel.app/**`, `http://localhost:3000/**`.
-5. **Email volume**: the built-in sender allows only **2 emails per hour per
-   project** (~48/day) — that is the real limit, not money. Set up free custom
-   SMTP (e.g. Gmail app password ~500/day, or Resend/Brevo free tiers) under
-   Authentication → Emails → SMTP Settings to lift it. Supabase's free plan
-   itself allows 50,000 monthly active users.
+- Signup is email-only: `signInWithOtp({ shouldCreateUser: true })`, then a six-digit
+  `verifyOtp({ type: 'email' })`. No password or delivery details are required upfront.
+- Sign-in defaults to an email code with `shouldCreateUser: false`; existing
+  password sign-in remains an explicit alternative. Both pages offer Google OAuth.
+- Recovery uses a six-digit code with `type: 'recovery'` before showing the password
+  form. An existing session or `?step=reset` alone never unlocks that form. The
+  verified user ID is checked again before updating the password.
+- Auth email templates are code-only, with `{{ .Token }}` and no confirmation link.
+  `supabase/templates/email-code.html` is shared by Confirm Signup, Magic Link,
+  and Reset Password. Supabase still calls the sign-in template "Magic Link".
+- The OTP widget uses one native input with six visual cells so paste, leading
+  zeroes, mobile autofill, selection and backspace work normally. Verification is
+  an explicit button action, with a 60-second resend cooldown and request locking.
+- Google uses Supabase's PKCE flow and `/auth/callback`, with internal-only return
+  destinations. It requests no Gmail mailbox access and no offline Google tokens.
+- AuthContext waits for profile/role loading, ignores stale profile responses on
+  account switches/sign-out, and avoids duplicate session initialization. Vendor
+  profile failures offer retry instead of silently sending the user back to login.
+- Global sign-out prevents refresh of other sessions; already-issued access tokens
+  can remain valid until expiry. The UI does not claim immediate global revocation.
+
+### Gmail SMTP Setup
+
+1. Enable Google 2-Step Verification and create a Gmail App Password at
+   `https://myaccount.google.com/apppasswords`. Never use the normal Gmail password.
+2. In Supabase Authentication > Emails > SMTP Settings, enable custom SMTP with
+   host `smtp.gmail.com`, port `465`, your full Gmail address as both username and
+   sender address, the App Password, and sender name `SwagOnCampus`.
+3. In Authentication > Sign In / Providers > Email, enable Confirm email and set
+   Email OTP length to `6`. The setup command uses a ten-minute expiry.
+4. Replace the Confirm Signup, Magic Link, and Reset Password email bodies with
+   `supabase/templates/email-code.html`. Remove all `{{ .ConfirmationURL }}` links.
+5. Keep email sending rate limits within Gmail's allowance. The optional setup
+   command starts at 30 emails/hour, not unlimited delivery.
+
+Personal Gmail has a general limit around 500 sent emails/day, shared with other
+mail sent by the account; throttling or anti-abuse checks can reduce capacity.
+Resends, signups and recovery all consume that allowance, so it is not a promise
+of 500 distinct users/day or inbox placement. Gmail SMTP has no extra message fee,
+but it is not a production bulk-mail service. Supabase's default sender is only
+for project-team addresses, at 2 emails/hour, not 48 arbitrary customers/day.
+
+### Google Sign-In Setup
+
+1. Create a Google Cloud OAuth Web application client with only the standard
+   `openid`, email and profile scopes. This is separate from the Gmail App Password.
+2. Authorized JavaScript origin: `https://swagoncampus.vercel.app`.
+3. Google authorized redirect URI:
+   `https://wmgnwtyhqfazkdbzlewz.supabase.co/auth/v1/callback`.
+4. Enable Google in Supabase Authentication > Sign In / Providers and enter the
+   Web client ID and secret. In Google's testing mode, only allowed test users
+   can sign in; configure the external audience/publishing state for real customers.
+5. Supabase Site URL: `https://swagoncampus.vercel.app`. Add this exact application
+   callback to Supabase's redirect allowlist:
+   `https://swagoncampus.vercel.app/auth/callback`.
+
+### Optional Configuration Command
+
+The owner can instead place private setup values in ignored `.env.local`:
+`SUPABASE_ACCESS_TOKEN`, `GMAIL_SMTP_USER`, `GMAIL_APP_PASSWORD`,
+`GOOGLE_CLIENT_ID`, and `GOOGLE_CLIENT_SECRET`. These must never be prefixed with
+`NEXT_PUBLIC_`, committed, placed in browser code, or pasted into chat.
+
+- `npm run auth:config -- --check`: read-only readiness check; returns nonzero
+  when configuration is incomplete or SMTP/template checks are unavailable.
+- `npm run auth:config -- --apply-email`: configure Gmail and all three code-only
+  templates. Requires the Gmail credentials and a Supabase management token.
+- `npm run auth:config -- --apply-google`: configure the Google provider and exact
+  production callback. Requires the OAuth credentials and management token.
+- No database migration is required. These commands do not change unrelated
+  vendors, products, session duration, MFA settings, or other OAuth providers.
+- A successful config check is not a delivery test. Confirm a real code arrives
+  and completes signup/sign-in/recovery, and separately complete a Google login.
 
 ## Multi-Vendor (added 2026-10-06)
 
