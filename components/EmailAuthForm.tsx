@@ -12,21 +12,24 @@ import { authErrorMessage, normalizeEmail, safeAuthRedirect } from "@/lib/auth";
 export function EmailAuthForm({ purpose }: { purpose: "signup" | "signin" }) {
   const searchParams = useSearchParams();
   const destination = safeAuthRedirect(searchParams.get("redirect") ?? searchParams.get("next"));
-  const [usePassword, setUsePassword] = useState(false);
+  const isSignup = purpose === "signup";
+  const [stage, setStage] = useState<"code" | "password">(isSignup ? "code" : "password");
+  const [verifiedEmail, setVerifiedEmail] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [processing, setProcessing] = useState<"password" | "google" | null>(null);
+  const [processing, setProcessing] = useState<"password" | "google" | "account" | null>(null);
   const [emailBusy, setEmailBusy] = useState(false);
   const [error, setError] = useState(() => {
     const callbackError = searchParams.get("error");
-    return callbackError === "oauth_cancelled" ? "Google sign-in was cancelled. You can try again or use email."
-      : callbackError ? "Sign-in could not be completed. Please try again or use an email code." : "";
+    return callbackError === "oauth_cancelled"
+      ? "Google sign-in was cancelled. Try again or use your password."
+      : callbackError ? "Sign-in could not be completed. Please try again." : "";
   });
   const busy = useRef(false);
   const mounted = useRef(false);
   const disabled = emailBusy || processing !== null;
-  const isSignup = purpose === "signup";
 
   useEffect(() => {
     mounted.current = true;
@@ -79,6 +82,29 @@ export function EmailAuthForm({ purpose }: { purpose: "signup" | "signin" }) {
     }
   }
 
+  async function createWithPassword(event: FormEvent) {
+    event.preventDefault();
+    if (busy.current || emailBusy) return;
+    if (password.length < 8) { setError("Use a password with at least 8 characters."); return; }
+    if (password !== confirm) { setError("Passwords do not match."); return; }
+    busy.current = true;
+    setProcessing("account");
+    setError("");
+    try {
+      // The session came from the verified email code, so setting a password
+      // finishes account creation without asking for the old credentials.
+      const { error: updateError } = await createClient().auth.updateUser({ password });
+      if (!mounted.current) return;
+      if (updateError) throw updateError;
+      window.location.assign(destination);
+    } catch (cause) {
+      if (mounted.current) setError(authErrorMessage(cause, "update"));
+    } finally {
+      busy.current = false;
+      if (mounted.current) setProcessing(null);
+    }
+  }
+
   const otherPage = isSignup ? "/auth/signin" : "/auth/signup";
   const otherHref = destination === "/" ? otherPage : `${otherPage}?redirect=${encodeURIComponent(destination)}`;
 
@@ -86,7 +112,7 @@ export function EmailAuthForm({ purpose }: { purpose: "signup" | "signin" }) {
     <AuthScreen variant={isSignup ? "signup" : "signin"}>
       <h1 className="mb-2 text-3xl font-black" style={{ color: "var(--text-primary)" }}>{isSignup ? "Create your account" : "Sign in"}</h1>
       <p className="mb-6 text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-        {isSignup ? "Start with your email or Google. No password needed." : "Use a six-digit email code or continue with Google."}
+        {isSignup ? "Continue with Google, or verify your email with a six-digit code and set your password." : "Continue with Google or your password."}
       </p>
 
       <button type="button" onClick={() => void signInWithGoogle()} disabled={disabled} className="auth-google-button flex min-h-12 w-full items-center justify-center gap-3 rounded-full border px-4 py-3 font-semibold disabled:cursor-not-allowed disabled:opacity-60">
@@ -94,10 +120,44 @@ export function EmailAuthForm({ purpose }: { purpose: "signup" | "signin" }) {
         {processing === "google" ? "Opening Google..." : "Continue with Google"}
       </button>
       <div className="my-6 flex items-center gap-3 text-xs" style={{ color: "var(--text-secondary)" }}>
-        <span className="h-px flex-1" style={{ background: "var(--border-color)" }} />or use email<span className="h-px flex-1" style={{ background: "var(--border-color)" }} />
+        <span className="h-px flex-1" style={{ background: "var(--border-color)" }} />
+        {isSignup ? "or use email" : "or use your password"}
+        <span className="h-px flex-1" style={{ background: "var(--border-color)" }} />
       </div>
 
-      {usePassword ? (
+      {isSignup ? (
+        stage === "code" ? (
+          <EmailCodeForm
+            purpose="signup"
+            nextDestination={destination}
+            disabled={processing !== null}
+            onBusyChange={setEmailBusy}
+            onVerified={(session) => { setVerifiedEmail(session.user?.email ?? ""); setStage("password"); setError(""); }}
+          />
+        ) : (
+          <form onSubmit={createWithPassword} className="space-y-5">
+            <div role="status" className="rounded-xl border p-4 text-sm leading-relaxed" style={{ borderColor: "var(--border-color)", color: "var(--text-secondary)", background: "var(--bg-secondary)" }}>
+              Email verified{verifiedEmail ? <>: <strong className="break-all">{verifiedEmail}</strong></> : null}. Choose a password to finish creating your account.
+            </div>
+            <div>
+              <label htmlFor="signup-password" className="mb-2 block text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>Password</label>
+              <div className="relative">
+                <input id="signup-password" type={showPassword ? "text" : "password"} autoComplete="new-password" minLength={8} required disabled={disabled} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="At least 8 characters" className="admin-input pr-12" />
+                <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Hide password" : "Show password"} className="absolute inset-y-0 right-0 flex w-12 items-center justify-center rounded-r-xl" style={{ color: "var(--text-secondary)" }}>
+                  {showPassword ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label htmlFor="signup-confirm" className="mb-2 block text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>Confirm password</label>
+              <input id="signup-confirm" type={showPassword ? "text" : "password"} autoComplete="new-password" minLength={8} required disabled={disabled} value={confirm} onChange={(event) => setConfirm(event.target.value)} className="admin-input" />
+            </div>
+            <button type="submit" disabled={disabled} className="btn-gold min-h-12 w-full rounded-full px-4 py-3 font-bold disabled:cursor-not-allowed disabled:opacity-60">
+              {processing === "account" ? "Creating account..." : "Create account"}
+            </button>
+          </form>
+        )
+      ) : (
         <form onSubmit={signInWithPassword} className="space-y-5">
           <div>
             <label htmlFor="signin-email" className="mb-2 block text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>Email address</label>
@@ -115,19 +175,14 @@ export function EmailAuthForm({ purpose }: { purpose: "signup" | "signin" }) {
               </button>
             </div>
           </div>
-          <button type="submit" disabled={disabled} className="btn-gold min-h-12 w-full rounded-full px-4 py-3 font-bold disabled:cursor-not-allowed disabled:opacity-60">{processing === "password" ? "Signing in..." : "Sign in with password"}</button>
+          <button type="submit" disabled={disabled} className="btn-gold min-h-12 w-full rounded-full px-4 py-3 font-bold disabled:cursor-not-allowed disabled:opacity-60">
+            {processing === "password" ? "Signing in..." : "Sign in"}
+          </button>
         </form>
-      ) : (
-        <EmailCodeForm purpose={purpose} onVerified={() => window.location.assign(destination)} disabled={processing !== null} onBusyChange={setEmailBusy} />
       )}
 
       {error && <p role="alert" className="auth-error mt-4 rounded-xl border px-4 py-3 text-sm">{error}</p>}
 
-      {!isSignup && (
-        <button type="button" disabled={disabled} onClick={() => { setUsePassword((value) => !value); setError(""); setPassword(""); }} className="mt-4 min-h-11 w-full rounded text-sm font-semibold underline-offset-4 hover:underline disabled:opacity-60" style={{ color: "var(--text-secondary)" }}>
-          {usePassword ? "Use an email code instead" : "Use a password instead"}
-        </button>
-      )}
       <p className="mt-5 text-center text-sm" style={{ color: "var(--text-secondary)" }}>
         {isSignup ? "Already have an account? " : "New to SwagOnCampus? "}
         <Link href={otherHref} className="font-bold underline underline-offset-4">{isSignup ? "Sign in" : "Create account"}</Link>

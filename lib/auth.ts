@@ -1,7 +1,7 @@
 export const EMAIL_CODE_LENGTH = 6;
 export const EMAIL_CODE_COOLDOWN_SECONDS = 60;
 
-export type EmailCodePurpose = "signup" | "signin" | "recovery";
+export type EmailCodePurpose = "signup" | "recovery";
 
 export function normalizeEmail(value: string): string {
   return value.trim().toLowerCase();
@@ -45,7 +45,7 @@ export function authErrorMessage(error: unknown, action: "send" | "verify" | "pa
   if (code === "same_password") return "Choose a password different from your current password.";
   if (code === "weak_password") return "Choose a stronger password with at least 8 characters, including letters and numbers.";
   if (action === "password" && ["invalid_credentials", "email_not_confirmed"].includes(code)) {
-    return "Unable to sign in with those details. Check your email and password, or use an email code.";
+    return "Unable to sign in with those details. Check your email and password.";
   }
   if (action === "google") return "Google sign-in could not start. Try again or use email. If it keeps failing, Google sign-in may not be configured yet.";
   if (action === "send") return "We couldn't send a code. Check your email address and connection, then try again. New here? Choose Create account.";

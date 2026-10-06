@@ -7,11 +7,12 @@ import { createClient } from "@/lib/supabase/client";
 import { authErrorMessage, EMAIL_CODE_COOLDOWN_SECONDS, isEmail, isEmailCode, normalizeEmail, type EmailCodePurpose } from "@/lib/auth";
 import { OtpInput } from "@/components/OtpInput";
 
-export function EmailCodeForm({ purpose, onVerified, disabled = false, onBusyChange }: {
+export function EmailCodeForm({ purpose, onVerified, disabled = false, onBusyChange, nextDestination }: {
   purpose: EmailCodePurpose;
   onVerified: (session: Session) => void;
   disabled?: boolean;
   onBusyChange?: (busy: boolean) => void;
+  nextDestination?: string;
 }) {
   const [email, setEmail] = useState("");
   const [sentEmail, setSentEmail] = useState("");
@@ -48,9 +49,15 @@ export function EmailCodeForm({ purpose, onVerified, disabled = false, onBusyCha
     setError("");
     try {
       const auth = createClient().auth;
+      // If the email still contains a link (template not switched to the code
+      // flow yet), send that link through /auth/callback so it creates a
+      // session instead of landing signed-out on the site root.
+      const emailRedirectTo = purpose === "signup" && nextDestination !== undefined
+        ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextDestination)}`
+        : undefined;
       const result = purpose === "recovery"
         ? await auth.resetPasswordForEmail(address)
-        : await auth.signInWithOtp({ email: address, options: { shouldCreateUser: purpose === "signup" } });
+        : await auth.signInWithOtp({ email: address, options: { shouldCreateUser: purpose === "signup", ...(emailRedirectTo ? { emailRedirectTo } : {}) } });
       if (!mounted.current) return;
       if (result.error) throw result.error;
       setEmail(address);

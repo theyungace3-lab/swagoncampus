@@ -193,7 +193,7 @@ test("auth errors have safe password and action-specific fallbacks for unknown o
 });
 
 function callback(options = {}) {
-  const calls = { create: 0, codes: [] };
+  const calls = { create: 0, codes: [], otps: [] };
   const logs = [];
   const record = (...args) => logs.push(args);
   const handlers = loadModule("app/auth/callback/route.ts", {
@@ -202,11 +202,20 @@ function callback(options = {}) {
       createClient: async () => {
         calls.create++;
         if (options.createError) throw options.createError;
-        return { auth: { exchangeCodeForSession: async (code) => {
-          calls.codes.push(code);
-          if (options.exchangeError) throw options.exchangeError;
-          return options.result ?? { data: { session: { access_token: sessionToken } }, error: null };
-        } } };
+        return {
+          auth: {
+            exchangeCodeForSession: async (code) => {
+              calls.codes.push(code);
+              if (options.exchangeError) throw options.exchangeError;
+              return options.result ?? { data: { session: { access_token: sessionToken } }, error: null };
+            },
+            verifyOtp: async (params) => {
+              calls.otps.push(params);
+              if (options.verifyError) throw options.verifyError;
+              return options.result ?? { data: { session: { access_token: sessionToken } }, error: null };
+            },
+          },
+        };
       },
     },
   }, { console: { log: record, warn: record, error: record } });
@@ -242,7 +251,7 @@ test("OAuth callback exchanges the exact code once and preserves safe destinatio
       assert.equal(route.dynamic, "force-dynamic");
       const response = await route.GET(callbackRequest({ code: oauthCode, [key]: destination, error_description: providerDetail }));
       assert.equal((await redirectLocation(response, route)).href, `${site}${destination}`);
-      assert.deepEqual(route.calls, { create: 1, codes: [oauthCode] });
+      assert.deepEqual(route.calls, { create: 1, codes: [oauthCode], otps: [] });
     }
   }
 });
@@ -277,7 +286,7 @@ test("OAuth callback handles missing or empty codes without creating a Supabase 
     assert.equal(location.pathname, "/auth/signin");
     assert.equal(location.searchParams.get("error"), "auth_error");
     assert.equal(location.searchParams.get("redirect"), "/vendor?view=orders#pending");
-    assert.deepEqual(route.calls, { create: 0, codes: [] });
+    assert.deepEqual(route.calls, { create: 0, codes: [], otps: [] });
   }
 });
 
@@ -295,7 +304,7 @@ test("OAuth callback handles exchange errors, null sessions, and exceptions with
     assert.equal(location.pathname, "/auth/signin");
     assert.equal(location.searchParams.get("error"), "auth_error");
     assert.equal(location.searchParams.get("redirect"), "/admin?view=analytics#today");
-    assert.deepEqual(route.calls, { create: 1, codes: options.createError ? [] : [oauthCode] });
+    assert.deepEqual(route.calls, { create: 1, codes: options.createError ? [] : [oauthCode], otps: [] });
   }
 });
 
@@ -307,8 +316,85 @@ test("cancelled or failed OAuth never exchanges a supplied code or reflects arbi
     assert.equal(location.pathname, "/auth/signin");
     assert.equal(location.searchParams.get("error"), error === "access_denied" ? "oauth_cancelled" : "auth_error");
     assert.equal(location.searchParams.get("redirect"), "/account#profile");
-    assert.deepEqual(route.calls, { create: 0, codes: [] });
+    assert.deepEqual(route.calls, { create: 0, codes: [], otps: [] });
   }
+});
+
+test("Supabase verification links sign in via token_hash and reject unknown or failed types", async () => {
+  const tokenHash = "fixture-email-token-hash-private";
+  // calls.otps elements are created inside the VM realm, so compare fields
+  // instead of deepStrictEqual (same structure, different prototypes).
+  const assertOtpCalls = (calls, { create, codes, otp }) => {
+    assert.equal(calls.create, create);
+    assert.deepEqual([...calls.codes], codes);
+    assert.equal(calls.otps.length, otp ? 1 : 0);
+    if (otp) {
+      assert.equal(calls.otps[0].type, otp.type);
+      assert.equal(calls.otps[0].token_hash, otp.token_hash);
+    }
+  };
+
+  // A known link type verifies the session and lands on the safe destination.
+  const route = callback();
+  const response = await route.GET(callbackRequest({ token_hash: tokenHash, type: "magiclink", next: "/account?tab=orders#latest", error_description: providerDetail }));
+  const location = await redirectLocation(response, route);
+  assert.equal(location.href, `${site}/account?tab=orders#latest`);
+  assert.equal(location.searchParams.has("token_hash"), false);
+  assertOtpCalls(route.calls, { create: 1, codes: [], otp: { type: "magiclink", token_hash: tokenHash } });
+
+  // Unknown types and missing values never reach the auth client.
+  for (const query of [{ token_hash: tokenHash, type: "ssh_magic" }, { token_hash: tokenHash }, { type: "magiclink" }, {}]) {
+    const unknown = callback();
+    const failed = await redirectLocation(await unknown.GET(callbackRequest(query)), unknown);
+    assert.equal(failed.pathname, "/auth/signin");
+    assert.equal(failed.searchParams.get("error"), "auth_error");
+    assertOtpCalls(unknown.calls, { create: 0, codes: [], otp: null });
+  }
+
+  // Verification errors and null sessions fall back without leaking details.
+  for (const options of [
+    { result: { data: { session: null }, error: { message: privateDetail } } },
+    { result: { data: { session: null }, error: null } },
+    { verifyError: new Error(privateDetail) },
+    { createError: new Error(privateDetail) },
+  ]) {
+    const failing = callback(options);
+    const failed = await redirectLocation(
+      await failing.GET(callbackRequest({ token_hash: tokenHash, type: "recovery", redirect: "/account#profile", error_description: providerDetail })),
+      failing,
+    );
+    assert.equal(failed.pathname, "/auth/signin");
+    assert.equal(failed.searchParams.get("error"), "auth_error");
+    assert.equal(failed.searchParams.get("redirect"), "/account#profile");
+    assertOtpCalls(failing.calls, {
+      create: 1,
+      codes: [],
+      otp: options.createError ? null : { type: "recovery", token_hash: tokenHash },
+    });
+  }
+});
+
+test("sign-in is Google plus password only; sign-up is Google plus code then set-password", () => {
+  const form = readFileSync(path.join(root, "components/EmailAuthForm.tsx"), "utf8");
+  // Both screens offer Google.
+  assert.match(form, /signInWithGoogle/);
+  assert.match(form, /Continue with Google/);
+  // Sign-in: password form with forgot-password link, no code flow or toggles.
+  assert.match(form, /signInWithPassword/);
+  assert.match(form, /\/auth\/forgot-password/);
+  assert.doesNotMatch(form, /Use a password instead|Use an email code instead/);
+  assert.doesNotMatch(form, /purpose="signin"/);
+  // Sign-up: email code stage, then the set-password stage via updateUser.
+  assert.match(form, /purpose="signup"/);
+  assert.match(form, /stage === "code"/);
+  assert.match(form, /setStage\("password"\)/);
+  assert.match(form, /updateUser\(\{ password \}\)/);
+
+  // The signup code request carries a callback redirect so link-style emails
+  // still create a session instead of landing signed-out on the site root.
+  const codeForm = readFileSync(path.join(root, "components/EmailCodeForm.tsx"), "utf8");
+  assert.match(codeForm, /emailRedirectTo/);
+  assert.match(codeForm, /\/auth\/callback\?next=/);
 });
 
 test("email settings use normalized Gmail App Passwords and require six-digit confirmed code-only flows", () => {

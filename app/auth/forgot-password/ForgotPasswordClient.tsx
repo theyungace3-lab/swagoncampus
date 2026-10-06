@@ -66,7 +66,7 @@ export function ForgotPasswordClient() {
           <Check className="mx-auto mb-4 h-10 w-10" style={{ color: "var(--gold-primary)" }} aria-hidden="true" />
           <h1 className="mb-3 text-3xl font-black" style={{ color: "var(--text-primary)" }}>Password updated</h1>
           <p className="mb-5 text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-            You can now sign in with your new password or an email code.
+            You can now sign in with your new password.
           </p>
           {signOutWarning ? (
             <p role="alert" className="auth-error mb-5 rounded-xl border p-4 text-sm">Your password was saved, but other sessions could not be signed out. Sign out of any shared devices.</p>
