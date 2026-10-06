@@ -427,6 +427,30 @@ body {
   color: var(--text-muted);
 }
 
+/* ── One-time-code boxes ── */
+.otp-box {
+  width: 100%;
+  height: 3.25rem;
+  text-align: center;
+  font-size: 1.375rem;
+  font-weight: 800;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.otp-box:focus {
+  border-color: var(--gold-primary);
+  box-shadow: 0 0 0 3px rgba(201, 146, 42, 0.12);
+}
+
+.otp-box:disabled {
+  opacity: 0.6;
+}
+
 option {
   background: var(--bg-card);
   color: var(--text-primary);

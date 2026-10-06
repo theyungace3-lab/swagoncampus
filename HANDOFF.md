@@ -8,6 +8,40 @@ The analytics implementation is complete, deployed to Vercel production, and
 active against the live Supabase project `wmgnwtyhqfazkdbzlewz`. The old plan
 below is archived and must not be followed as an outstanding implementation checklist.
 
+## Email OTP Auth (added 2026-10-06)
+
+Sign-in and password reset both support a free 6-digit email code. No SMS or
+WhatsApp OTP — those cost money per message.
+
+- **Sign in** (`/auth/signin`): a Password / Email code toggle. Email code uses
+  `signInWithOtp({ shouldCreateUser: false })` then `verifyOtp({ type: 'email' })`,
+  so it can never create an account as a side effect.
+- **Forgot password** (`/auth/forgot-password`): email → 6-digit code →
+  new password. Uses `resetPasswordForEmail` → `verifyOtp({ type: 'recovery' })`
+  → `updateUser({ password })`, then `signOut({ scope: 'global' })` so any other
+  signed-in device with the old password is invalidated. The emailed link also
+  works: it returns via `/auth/callback` to the same page. An expired or reused
+  link falls back to the request step with a clear message.
+- Shared `components/OtpInput.tsx` (6 boxes, paste, arrows, auto-submit on the
+  sixth digit) and a 60-second resend cooldown matching Supabase's per-user window.
+
+### REQUIRED Supabase dashboard config for OTP
+
+The code is not in the email template by default — only a link. **Add the token
+or the OTP screens will have nothing to verify.**
+
+1. **Authentication → Emails → Magic Link**: include `{{ .Token }}`
+   (keep `{{ .ConfirmationURL }}` too if you want both).
+2. **Authentication → Emails → Reset Password**: include `{{ .Token }}`.
+3. **Authentication → Providers → Email**: confirm the OTP length is 6 (default).
+4. **Authentication → URL Configuration**: Site URL `https://swagoncampus.vercel.app`
+   and Redirect URLs `https://swagoncampus.vercel.app/**`, `http://localhost:3000/**`.
+5. **Email volume**: the built-in sender allows only **2 emails per hour per
+   project** (~48/day) — that is the real limit, not money. Set up free custom
+   SMTP (e.g. Gmail app password ~500/day, or Resend/Brevo free tiers) under
+   Authentication → Emails → SMTP Settings to lift it. Supabase's free plan
+   itself allows 50,000 monthly active users.
+
 ## Multi-Vendor (added 2026-10-06)
 
 The store owner keeps a supreme panel; other sellers get a scoped vendor panel.

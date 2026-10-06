@@ -23,6 +23,7 @@ create index if not exists analytics_events_type_created_idx
   on public.analytics_events (type, created_at desc);
 create index if not exists analytics_events_visitor_idx
   on public.analytics_events (visitor_id, created_at desc);
+
 -- Supports the all-time distinct-visitor counts via an index-only scan.
 create index if not exists analytics_events_type_visitor_idx
   on public.analytics_events (type, visitor_id);
