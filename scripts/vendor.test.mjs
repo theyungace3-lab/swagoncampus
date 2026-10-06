@@ -91,8 +91,8 @@ test("a vendor insert forces ownership, computes the store price, and drops tamp
   });
   assert.equal(row.vendor_id, VENDOR_A.id);
   assert.equal(row.vendor_price, 6000);
-  assert.equal(row.markup, 500);
-  assert.equal(row.price, 6500);
+  assert.equal(row.markup, 200);
+  assert.equal(row.price, 6200);
   assert.equal(row.featured, false);
 });
 
@@ -108,12 +108,12 @@ test("an owner insert keeps store pricing, stays store-owned, and omits vendor c
 test("a vendor update recomputes price and cannot set featured or another owner", () => {
   const patch = vendorProduct.buildProductUpdate(asVendor(VENDOR_A), { vendor_price: 5000, featured: true, vendor_id: VENDOR_B.id, price: 1 }, { vendor_id: VENDOR_A.id, vendor_price: 4000, markup: 500 });
   assert.equal(patch.vendor_id, VENDOR_A.id);
-  assert.equal(patch.price, 5500);
+  assert.equal(patch.price, 5200);
   assert.equal(patch.featured, false);
   assert.equal(patch.price === 1, false);
 });
 
-test("an owner editing a vendor product keeps the vendor-pricing rule", () => {
+test("an owner editing a vendor product keeps the markup stored on the row", () => {
   const patch = vendorProduct.buildProductUpdate(owner, { vendor_price: 8000, featured: true }, { vendor_id: VENDOR_A.id, vendor_price: 4000, markup: 500 });
   assert.equal(patch.price, 8500);
   assert.equal(patch.featured, true);
@@ -135,7 +135,7 @@ test("POST /api/products: vendors are scoped, customers are rejected", async () 
   const response = await vendorRoute.POST(jsonRequest("https://shop.test/api/products", "POST", { ...fullBody, vendor_price: 4500, featured: true, vendor_id: VENDOR_B.id }));
   assert.equal(response.status, 201);
   assert.deepEqual(vendorAdmin.calls.insert[0].vendor_id, VENDOR_A.id);
-  assert.equal(vendorAdmin.calls.insert[0].price, 5000);
+  assert.equal(vendorAdmin.calls.insert[0].price, 4700);
   assert.equal(vendorAdmin.calls.insert[0].featured, false);
 
   const customerRoute = routeFor("app/api/products/route.ts", customer, fakeAdmin());
@@ -152,7 +152,7 @@ test("PATCH /api/products/:id: a vendor cannot edit another vendor's product", a
   const ownRoute = routeFor("app/api/products/[id]/route.ts", asVendor(VENDOR_A), own);
   const ok = await ownRoute.PATCH(jsonRequest("https://shop.test/api/products/1", "PATCH", { vendor_price: 5000, featured: true }), { params: Promise.resolve({ id: "1" }) });
   assert.equal(ok.status, 200);
-  assert.equal(own.calls.update[0].price, 5500);
+  assert.equal(own.calls.update[0].price, 5200);
   assert.equal(own.calls.update[0].featured, false);
 });
 
