@@ -8,7 +8,39 @@ The analytics implementation is complete, deployed to Vercel production, and
 active against the live Supabase project `wmgnwtyhqfazkdbzlewz`. The old plan
 below is archived and must not be followed as an outstanding implementation checklist.
 
-## Email Codes And Google (updated 2026-10-06)
+## Profile Role Lockdown (added 2026-10-06)
+
+**Action required:** run `supabase/harden-profiles.sql` once in the Supabase SQL
+Editor (Role `postgres`). It is idempotent and safe to re-run. Everything else
+keeps working; the owner still promotes vendors from the admin Vendors tab.
+
+**The hole:** `profiles_own_update` had no `with check`, and `profiles_admin_all`
+in `schema.sql`/`fix.sql` used `using (true) with check (true)`. A signed-in
+customer could run `update profiles set role = 'vendor' where id = auth.uid()`
+and grant themselves vendor (or admin) access. The client also had full table
+INSERT/UPDATE/DELETE grants.
+
+**The fix:**
+- Least-privilege grants: `anon`/`authenticated` lose INSERT/UPDATE/DELETE on
+  `profiles`; `authenticated` keeps SELECT and UPDATE on `full_name`, `phone`,
+  `hostel` only.
+- Owner-scoped policies replace the blanket ones: own-row read/update, plus
+  `profiles_owner_all` gated by `public.is_owner()`.
+- A `profiles_guard` trigger rejects any role change or profile-id change coming
+  from an API request (JWT present) unless the caller is the service role or the
+  owner. Direct DB / SQL-editor sessions can still fix data on purpose.
+- `handle_new_user` is recreated with a pinned `search_path` and never copies a
+  role from user metadata.
+- `fix.sql` no longer recreates the permissive `using (true)` policies; its
+  write-admin policies are dropped because all admin writes use the service role.
+
+**Verified** in isolated PostgreSQL (`verify-harden.mjs`): the pre-fix exploit
+succeeds, then fails after hardening; own safe fields update; role and id changes
+are denied; cross-profile updates affect zero rows; the service role can still
+assign `vendor`; no `using (true)` profile policy remains; new signups still get a
+customer profile; and re-running `fix.sql` does not reopen the hole.
+
+
 
 The latest auth changes are in the working tree. They are not proof of working
 email delivery: SMTP/templates and the Google provider must be configured in
@@ -113,7 +145,7 @@ The store owner keeps a supreme panel; other sellers get a scoped vendor panel.
 - **Promotion**: the owner promotes an account to vendor from the new **Vendors**
   tab (`PATCH /api/admin/vendors`). The owner's own role can never be changed there.
 - **Pricing**: a vendor sets their own price; the customer-facing price is
-  `vendor_price + OWNER_MARKUP` (₦500). The server computes it (`lib/vendorProduct.ts`)
+  `vendor_price + OWNER_MARKUP` (₦200). The server computes it (`lib/vendorProduct.ts`)
   so a vendor cannot tamper with `price`, `markup`, `vendor_id`, or `featured`.
   Store-owned products have `vendor_id = null` and are never visible to vendors.
 - **Defence in depth**: authorization is enforced in the API routes (`lib/authz.ts`)

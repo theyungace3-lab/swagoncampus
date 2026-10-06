@@ -4,10 +4,11 @@
 -- ══════════════════════════════════════════════════════════
 
 -- 1. Re-create the profile trigger (in case it was missed)
+-- SECURITY DEFINER with a pinned search_path; never copies a role from metadata.
 create or replace function handle_new_user()
-returns trigger language plpgsql security definer as $$
+returns trigger language plpgsql security definer set search_path = '' as $$
 begin
-  insert into profiles (id, full_name)
+  insert into public.profiles (id, full_name)
   values (new.id, coalesce(new.raw_user_meta_data->>'full_name', ''))
   on conflict (id) do nothing;
   return new;
@@ -19,38 +20,47 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function handle_new_user();
 
--- 2. Drop and recreate all policies cleanly (fixes duplicate policy errors)
--- Products
+-- 2. Recreate the public/read policies safely.
+-- WARNING: this script used to create `using (true)` write policies, which let
+-- any signed-in customer edit products, discounts, orders, and (worst) their own
+-- profile role. Those permissive policies are removed here. All admin writes go
+-- through the service-role API, which bypasses RLS, so no write policy is needed.
+-- Run supabase/vendors.sql for the owner/vendor product policies, and
+-- supabase/harden-profiles.sql to lock profile role changes down.
+
+-- Products: public read only (admin writes use the service role)
 drop policy if exists "products_public_read"  on products;
 drop policy if exists "products_admin_insert" on products;
 drop policy if exists "products_admin_update" on products;
 drop policy if exists "products_admin_delete" on products;
-create policy "products_public_read"  on products for select using (true);
-create policy "products_admin_insert" on products for insert with check (true);
-create policy "products_admin_update" on products for update using (true);
-create policy "products_admin_delete" on products for delete using (true);
+drop policy if exists "products_owner_insert" on products;
+drop policy if exists "products_owner_update" on products;
+drop policy if exists "products_owner_delete" on products;
+drop policy if exists "products_vendor_insert" on products;
+drop policy if exists "products_vendor_update" on products;
+drop policy if exists "products_vendor_delete" on products;
+create policy "products_public_read" on products for select using (true);
 
--- Discounts
+-- Discounts: public read only
 drop policy if exists "discounts_public_read" on discounts;
 drop policy if exists "discounts_admin_write" on discounts;
 create policy "discounts_public_read" on discounts for select using (true);
-create policy "discounts_admin_write" on discounts for all using (true) with check (true);
 
--- Profiles
+-- Profiles: own row only. No `using (true)` policy, no role escalation.
+-- Roles are managed by the service-role owner API.
 drop policy if exists "profiles_own_read"   on profiles;
 drop policy if exists "profiles_own_update" on profiles;
 drop policy if exists "profiles_admin_all"  on profiles;
 create policy "profiles_own_read"   on profiles for select using (auth.uid() = id);
-create policy "profiles_own_update" on profiles for update using (auth.uid() = id);
-create policy "profiles_admin_all"  on profiles for all using (true) with check (true);
+create policy "profiles_own_update" on profiles for update
+  using      (auth.uid() = id)
+  with check (auth.uid() = id);
 
--- Orders
+-- Orders: read your own; creation goes through the service role.
 drop policy if exists "orders_own_read"   on orders;
 drop policy if exists "orders_own_insert" on orders;
 drop policy if exists "orders_admin_all"  on orders;
-create policy "orders_own_read"   on orders for select using (auth.uid() = user_id);
-create policy "orders_own_insert" on orders for insert with check (auth.uid() = user_id);
-create policy "orders_admin_all"  on orders for all using (true) with check (true);
+create policy "orders_own_read" on orders for select using (auth.uid() = user_id);
 
 -- 3. Seed products (skips existing ones)
 insert into products (name, description, price, category, image, sizes, colors, in_stock, featured) values
