@@ -81,15 +81,15 @@ export function SignUpClient() {
   }
 
   return (
-    <div className="min-h-screen flex">
-      {/* ── Left: Background image (colorful clothing rack) ── */}
+    <div className="relative min-h-screen lg:flex">
+      {/* ── Background image (colorful clothing rack): full-screen on mobile, left half on desktop ── */}
       <div
-        className="hidden lg:block lg:w-1/2 relative bg-cover bg-center"
+        className="absolute inset-0 lg:relative lg:w-1/2 bg-cover bg-center"
         style={{ backgroundImage: "url('/auth-signup-bg.jpg')" }}
         aria-hidden="true"
       >
         <div className="absolute inset-0 bg-black/50" />
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-12">
+        <div className="hidden lg:flex absolute inset-0 flex-col items-center justify-center text-center px-12">
           <BrandMark size={56} className="mb-4 animate-gentle-bounce" />
           <h2 className="text-4xl font-black text-white leading-tight mb-3">
             Join the campus<br />
@@ -110,12 +110,9 @@ export function SignUpClient() {
         </div>
       </div>
 
-      {/* ── Right: Form ── */}
-      <div
-        className="w-full lg:w-1/2 flex items-center justify-center px-6 py-12 overflow-y-auto"
-        style={{ background: "var(--bg-primary)" }}
-      >
-        <div className="w-full max-w-md">
+      {/* ── Form ── */}
+      <div className="relative z-10 flex min-h-screen w-full items-center justify-center px-4 py-12 lg:w-1/2 lg:px-6 lg:py-10">
+        <div className="auth-form-surface w-full max-w-md">
           <div className="flex items-center gap-2 mb-6">
             <BrandMark size={28} />
             <span className="text-2xl font-black gold-text">SwagOnCampus</span>

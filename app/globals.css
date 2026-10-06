@@ -164,6 +164,31 @@ body {
   box-shadow: var(--shadow-deep), 0 0 0 1px var(--gold-primary);
 }
 
+/* ── Auth form surface ──
+   On mobile the auth background image fills the screen, so the form sits on a
+   readable card. On desktop the split layout returns the plain panel. */
+.auth-form-surface {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  box-shadow: var(--shadow-deep);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 1.5rem;
+}
+
+@media (min-width: 1024px) {
+  .auth-form-surface {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    padding: 0;
+  }
+}
+
 /* ── Gold Gradient Button ── */
 .btn-gold {
   background: linear-gradient(135deg, var(--gold-primary), var(--gold-light), var(--gold-primary));

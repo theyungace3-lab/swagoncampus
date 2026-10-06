@@ -37,17 +37,17 @@ export function SignInClient() {
   }
 
   return (
-    <div className="min-h-screen flex">
-      {/* ── Left: Background image (wooden hangers) ── */}
+    <div className="relative min-h-screen lg:flex">
+      {/* ── Background image (wooden hangers): full-screen on mobile, left half on desktop ── */}
       <div
-        className="hidden lg:block lg:w-1/2 relative bg-cover bg-center"
+        className="absolute inset-0 lg:relative lg:w-1/2 bg-cover bg-center"
         style={{ backgroundImage: "url('/auth-signin-bg.jpg')" }}
         aria-hidden="true"
       >
         {/* Dark overlay */}
         <div className="absolute inset-0 bg-black/50" />
-        {/* Tagline */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-12">
+        {/* Tagline (desktop only, the mobile card carries the branding) */}
+        <div className="hidden lg:flex absolute inset-0 flex-col items-center justify-center text-center px-12">
           <BrandMark size={56} className="mb-4 animate-gentle-bounce" />
           <h2 className="text-4xl font-black text-white leading-tight mb-3">
             Welcome back to<br />
@@ -60,12 +60,9 @@ export function SignInClient() {
         </div>
       </div>
 
-      {/* ── Right: Form ── */}
-      <div
-        className="w-full lg:w-1/2 flex items-center justify-center px-6 py-16"
-        style={{ background: "var(--bg-primary)" }}
-      >
-        <div className="w-full max-w-md">
+      {/* ── Form ── */}
+      <div className="relative z-10 flex min-h-screen w-full items-center justify-center px-4 py-12 lg:w-1/2 lg:px-6 lg:py-16">
+        <div className="auth-form-surface w-full max-w-md">
           {/* Logo */}
           <div className="flex items-center gap-2 mb-8">
             <BrandMark size={28} />
