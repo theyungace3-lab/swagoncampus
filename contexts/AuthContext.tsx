@@ -46,36 +46,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, fetchProfile]);
 
   useEffect(() => {
-    // Get existing session on mount
-    createClient().auth.getSession().then(
-      ({ data: { session: s } }: { data: { session: Session | null } }) => {
-        setSession(s);
-        setUser(s?.user ?? null);
-        if (s?.user) fetchProfile(s.user.id);
-        setLoading(false);
+    const supabase = createClient();
+    let active = true;
+
+    function applySession(s: Session | null) {
+      if (!active) return;
+      setSession(s);
+      setUser(s?.user ?? null);
+      if (s?.user) {
+        void fetchProfile(s.user.id);
+      } else {
+        setProfile(null);
       }
+      setLoading(false);
+    }
+
+    // Read the session already stored in cookies.
+    supabase.auth.getSession().then(
+      ({ data: { session: s } }: { data: { session: Session | null } }) => applySession(s)
     );
 
-    // Single persistent listener — the singleton client ensures
-    // this only ever fires once and stays alive across navigations
-    const { data: { subscription } } = createClient().auth.onAuthStateChange(
-      (event: AuthChangeEvent, s: Session | null) => {
-        // Ignore INITIAL_SESSION — we handle it above via getSession
-        if (event === "INITIAL_SESSION") return;
-
-        setSession(s);
-        setUser(s?.user ?? null);
-
-        if (s?.user) {
-          fetchProfile(s.user.id);
-        } else {
-          setProfile(null);
-        }
-        setLoading(false);
-      }
+    // Single persistent listener — the singleton client ensures this only ever
+    // fires once and stays alive across navigations. INITIAL_SESSION is handled
+    // too so state cannot be left stale by a slower getSession() resolving after
+    // a refresh or sign-out event.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event: AuthChangeEvent, s: Session | null) => applySession(s)
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
   }, [fetchProfile]); // stable — fetchProfile is useCallback
 
   const signOut = useCallback(async () => {
