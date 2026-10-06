@@ -14,11 +14,20 @@ export type Database = {
           colors: string[];
           in_stock: boolean;
           featured: boolean;
+          vendor_id: string | null;
+          vendor_price: number | null;
+          markup: number;
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<Database["public"]["Tables"]["products"]["Row"], "id" | "created_at" | "updated_at"> & {
+        Insert: Omit<
+          Database["public"]["Tables"]["products"]["Row"],
+          "id" | "created_at" | "updated_at" | "vendor_id" | "vendor_price" | "markup"
+        > & {
           id?: string;
+          vendor_id?: string | null;
+          vendor_price?: number | null;
+          markup?: number;
         };
         Update: Partial<Database["public"]["Tables"]["products"]["Insert"]>;
       };
@@ -43,7 +52,7 @@ export type Database = {
           full_name: string;
           phone: string;
           hostel: string;
-          role: "customer" | "admin";
+          role: "customer" | "admin" | "vendor";
           created_at: string;
         };
         Insert: Omit<Database["public"]["Tables"]["profiles"]["Row"], "created_at"> & { id: string };

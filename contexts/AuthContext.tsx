@@ -14,6 +14,7 @@ interface AuthContextValue {
   session: Session | null;
   profile: DbProfile | null;
   isAdmin: boolean;
+  isVendor: boolean;
   loading: boolean;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -29,6 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL?.trim().toLowerCase() ?? "";
   const isAdmin    = !!adminEmail && !!user && user.email?.toLowerCase() === adminEmail;
+  const isVendor   = !isAdmin && profile?.role === "vendor";
 
   const fetchProfile = useCallback(async (userId: string) => {
     try {
@@ -87,7 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, session, profile, isAdmin, loading, signOut, refreshProfile }}
+      value={{ user, session, profile, isAdmin, isVendor, loading, signOut, refreshProfile }}
     >
       {children}
     </AuthContext.Provider>

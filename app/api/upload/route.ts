@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { getAdminDb } from "@/lib/supabase/admin";
+import { getCaller } from "@/lib/authz";
 
 const BUCKET = "product-images";
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 
-// POST /api/upload — admin only, uploads an image to Supabase Storage
+// POST /api/upload — owner or vendor. Files are namespaced by uploader id:
+//   <user uuid>/<file>   (owner or vendor)
 export async function POST(request: NextRequest) {
-  const { data: { user } } = await (await createClient()).auth.getUser();
-  if (!user || user.email !== process.env.NEXT_PUBLIC_ADMIN_EMAIL) {
+  const caller = await getCaller();
+  if (!caller.isOwner && !caller.isVendor) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -31,7 +32,8 @@ export async function POST(request: NextRequest) {
   }
 
   const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
-  const safeName = `product-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const folder = caller.user!.id;
+  const safeName = `${folder}/product-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
 
   const admin = getAdminDb();
   const { error } = await admin.storage

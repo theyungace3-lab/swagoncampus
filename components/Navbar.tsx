@@ -7,7 +7,7 @@ import { useTheme } from "next-themes";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProducts } from "@/contexts/ProductsContext";
-import { ShoppingCart, Sun, Moon, Menu, X, ShieldCheck, User, LogOut, ChevronDown, Search } from "lucide-react";
+import { ShoppingCart, Sun, Moon, Menu, X, ShieldCheck, Store, User, LogOut, ChevronDown, Search } from "lucide-react";
 import { useState, useEffect, useRef, useMemo, type FormEvent } from "react";
 import { BrandMark } from "@/components/BrandMark";
 import { CATEGORY_SECTIONS, formatPrice } from "@/lib/products";
@@ -17,7 +17,7 @@ export function Navbar() {
   const router            = useRouter();
   const { theme, setTheme } = useTheme();
   const { cartCount, toggleCart } = useCart();
-  const { user, profile, isAdmin, signOut } = useAuth();
+  const { user, profile, isAdmin, isVendor, signOut } = useAuth();
 
   const [menuOpen, setMenuOpen]       = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -321,6 +321,13 @@ export function Navbar() {
                             <ShieldCheck className="w-4 h-4" /> Admin Panel
                           </Link>
                         )}
+                        {isVendor && (
+                          <Link href="/vendor" onClick={() => setUserMenuOpen(false)}
+                            className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold hover:bg-[rgba(201,146,42,0.08)] transition-colors"
+                            style={{ color: "var(--gold-primary)" }}>
+                            <Store className="w-4 h-4" /> Vendor Panel
+                          </Link>
+                        )}
                         <button onClick={handleSignOut}
                           className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-semibold hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 transition-colors">
                           <LogOut className="w-4 h-4" /> Sign Out
@@ -482,6 +489,13 @@ export function Navbar() {
                       className="px-4 py-3 rounded-xl text-sm font-semibold hover:bg-[rgba(201,146,42,0.08)] transition-all flex items-center gap-2"
                       style={{ color: "var(--gold-primary)" }}>
                       <ShieldCheck className="w-4 h-4" /> Admin Panel
+                    </Link>
+                  )}
+                  {isVendor && (
+                    <Link href="/vendor" onClick={() => setMenuOpen(false)}
+                      className="px-4 py-3 rounded-xl text-sm font-semibold hover:bg-[rgba(201,146,42,0.08)] transition-all flex items-center gap-2"
+                      style={{ color: "var(--gold-primary)" }}>
+                      <Store className="w-4 h-4" /> Vendor Panel
                     </Link>
                   )}
                   <button onClick={() => { handleSignOut(); setMenuOpen(false); }}

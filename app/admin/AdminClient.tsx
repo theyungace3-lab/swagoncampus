@@ -1,71 +1,73 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
-  Plus, Trash2, Edit2, Star, Package,
-  ToggleLeft, ToggleRight, X, Check, LogOut, Tag, RefreshCw,
-  ShoppingBag, TrendingUp, ImagePlus,
+  Plus, Trash2, Edit2, Star, Package, ToggleLeft, ToggleRight, Check,
+  LogOut, Tag, RefreshCw, ShoppingBag, TrendingUp, Store, Users, ShieldCheck,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { CATEGORY_SECTIONS, formatPrice, normalizeCategory, getCategoryLabel } from "@/lib/products";
-import { Category } from "@/lib/types";
+import { formatPrice, normalizeCategory, getCategoryLabel } from "@/lib/products";
+import type { Category } from "@/lib/types";
 import type { DbProduct, DbDiscount } from "@/lib/supabase/types";
 import { AdminAnalytics } from "@/components/AdminAnalytics";
+import { ProductForm, EMPTY_PRODUCT_FORM, type ProductFormValues } from "@/components/ProductForm";
 
-const SIZE_OPTIONS  = ["XS","S","M","L","XL","XXL","One Size","28","30","32","34","36","38","39","40","41","42","43","44"];
-const COLOR_OPTIONS = ["White","Black","Grey","Navy","Brown","Beige","Blue","Red","Green","Pink","Gold","Olive","Sage","Khaki"];
+interface VendorRow {
+  id: string;
+  email: string;
+  fullName: string;
+  role: "customer" | "admin" | "vendor";
+  isOwner: boolean;
+  productCount: number;
+}
 
-const EMPTY_FORM = {
-  name: "", price: 0, category: "tops" as Category,
-  image: "", description: "", sizes: [] as string[], colors: [] as string[],
-  in_stock: true, featured: false,
-};
+type Tab = "analytics" | "products" | "vendors" | "discounts";
 
-type Tab = "analytics" | "products" | "discounts" | "orders";
+function toFormValues(p: DbProduct): ProductFormValues {
+  return {
+    name: p.name,
+    description: p.description ?? "",
+    category: normalizeCategory(p.category) as Category,
+    image: p.image,
+    sizes: [...p.sizes],
+    colors: [...p.colors],
+    in_stock: p.in_stock,
+    featured: p.featured,
+    price: p.vendor_id ? Number(p.vendor_price ?? 0) : Number(p.price),
+    vendor_price: Number(p.vendor_price ?? 0),
+  };
+}
 
 export function AdminClient() {
   const { user, isAdmin, loading: authLoading, signOut } = useAuth();
-  const router   = useRouter();
+  const router = useRouter();
 
-  // redirect if not admin
   useEffect(() => {
     if (!authLoading && (!user || !isAdmin)) {
       router.push("/auth/signin?redirect=/admin");
     }
   }, [authLoading, user, isAdmin, router]);
 
-  const [tab, setTab]         = useState<Tab>("analytics");
+  const [tab, setTab] = useState<Tab>("analytics");
   const [products, setProducts] = useState<DbProduct[]>([]);
   const [discounts, setDiscounts] = useState<DbDiscount[]>([]);
+  const [vendors, setVendors] = useState<VendorRow[]>([]);
   const [statsLoading, setStatsLoading] = useState(true);
+  const [vendorFilter, setVendorFilter] = useState<string>("all");
+  const [vendorBusy, setVendorBusy] = useState<string | null>(null);
 
-  // Product form
-  const [view, setView]           = useState<"list"|"add"|"edit">("list");
-  const [editingId, setEditingId] = useState<string|null>(null);
-  const [form, setForm]           = useState(EMPTY_FORM);
-  const [formError, setFormError] = useState("");
-  const [saving, setSaving]       = useState(false);
-  const [saveOk, setSaveOk]       = useState(false);
-  const [deleteId, setDeleteId]   = useState<string|null>(null);
-  const [customSize, setCustomSize]   = useState("");
-  const [customColor, setCustomColor] = useState("");
+  const [view, setView] = useState<"list" | "add" | "edit">("list");
+  const [editing, setEditing] = useState<DbProduct | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  // Image upload state
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [imageUploadError, setImageUploadError] = useState("");
-  const [dragOver, setDragOver] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Discount form
   const [discForm, setDiscForm] = useState({
-    label: "", type: "percentage" as "percentage"|"fixed",
-    value: 0, product_id: "" as string|null, active: true, ends_at: "",
+    label: "", type: "percentage" as "percentage" | "fixed",
+    value: 0, product_id: "" as string | null, active: true, ends_at: "",
   });
   const [discSaving, setDiscSaving] = useState(false);
-  const [discError, setDiscError]   = useState("");
+  const [discError, setDiscError] = useState("");
 
   const loadProducts = useCallback(async () => {
     const res = await fetch("/api/products");
@@ -78,9 +80,14 @@ export function AdminClient() {
     setStatsLoading(false);
   }, []);
 
+  const loadVendors = useCallback(async () => {
+    const res = await fetch("/api/admin/vendors");
+    if (res.ok) setVendors(await res.json());
+  }, []);
+
   useEffect(() => {
-    if (isAdmin) { loadProducts(); loadDiscounts(); }
-  }, [isAdmin, loadProducts, loadDiscounts]);
+    if (isAdmin) { loadProducts(); loadDiscounts(); loadVendors(); }
+  }, [isAdmin, loadProducts, loadDiscounts, loadVendors]);
 
   if (authLoading || !user || !isAdmin) {
     return (
@@ -90,335 +97,109 @@ export function AdminClient() {
     );
   }
 
-  // ── Product helpers ──────────────────────────────────────
-  function startAdd() { setForm(EMPTY_FORM); setEditingId(null); setFormError(""); setImageUploadError(""); setView("add"); }
+  const vendorById = new Map(vendors.map((v) => [v.id, v]));
+  const vendorLabel = (id: string | null) => {
+    if (!id) return "You (store)";
+    const v = vendorById.get(id);
+    return v?.fullName || v?.email || "Vendor";
+  };
 
-  function startEdit(p: DbProduct) {
-    setForm({
-      name: p.name, price: p.price, category: normalizeCategory(p.category),
-      image: p.image, description: p.description, sizes: [...p.sizes],
-      colors: [...p.colors], in_stock: p.in_stock, featured: p.featured,
-    });
-    setEditingId(p.id); setFormError(""); setView("edit");
-  }
+  function startAdd() { setEditing(null); setView("add"); }
+  function startEdit(p: DbProduct) { setEditing(p); setView("edit"); }
 
-  // Upload an image file to Supabase Storage and set the resulting URL
-  async function handleImageFile(file: File) {
-    setImageUploadError("");
-    if (!file.type.startsWith("image/")) {
-      setImageUploadError("Please choose an image file (jpg, png, webp, etc.).");
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setImageUploadError("Image must be under 5MB.");
-      return;
-    }
-    setUploadingImage(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch("/api/upload", { method: "POST", body: formData });
+  async function submitProduct(payload: Record<string, unknown>) {
+    const res = editing
+      ? await fetch(`/api/products/${editing.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
+      : await fetch("/api/products", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Upload failed");
-      setForm((f) => ({ ...f, image: data.url as string }));
-    } catch (err) {
-      setImageUploadError(err instanceof Error ? err.message : "Upload failed");
-    } finally {
-      setUploadingImage(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      throw new Error(data.error || "Could not save the product.");
     }
-  }
-
-  function toggleSize(s: string) {
-    setForm((f) => ({ ...f, sizes: f.sizes.includes(s) ? f.sizes.filter((x) => x !== s) : [...f.sizes, s] }));
-  }
-  function toggleColor(c: string) {
-    setForm((f) => ({ ...f, colors: f.colors.includes(c) ? f.colors.filter((x) => x !== c) : [...f.colors, c] }));
-  }
-
-  async function handleSave() {
-    if (!form.name.trim())   { setFormError("Name is required."); return; }
-    if (form.price <= 0)     { setFormError("Price must be > 0."); return; }
-    if (!form.image.trim())  { setFormError("Image URL is required."); return; }
-    if (!form.sizes.length)  { setFormError("Select at least one size."); return; }
-    if (!form.colors.length) { setFormError("Select at least one color."); return; }
-    setFormError(""); setSaving(true);
-
-    const payload = { ...form, category: String(form.category) };
-
-    if (view === "add") {
-      await fetch("/api/products", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-    } else if (editingId) {
-      await fetch(`/api/products/${editingId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-    }
-
     await loadProducts();
-    setSaving(false); setSaveOk(true);
-    setTimeout(() => { setSaveOk(false); setView("list"); }, 1200);
+    await loadVendors();
   }
 
   async function handleDelete(id: string) {
     if (deleteId !== id) { setDeleteId(id); setTimeout(() => setDeleteId(null), 3000); return; }
     await fetch(`/api/products/${id}`, { method: "DELETE" });
-    setDeleteId(null); await loadProducts();
+    setDeleteId(null);
+    await loadProducts();
+    await loadVendors();
   }
 
   async function toggleStock(p: DbProduct) {
-    await fetch(`/api/products/${p.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ in_stock: !p.in_stock }),
-    });
+    await fetch(`/api/products/${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ in_stock: !p.in_stock }) });
     await loadProducts();
   }
   async function toggleFeatured(p: DbProduct) {
-    await fetch(`/api/products/${p.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ featured: !p.featured }),
-    });
+    await fetch(`/api/products/${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ featured: !p.featured }) });
     await loadProducts();
   }
 
-  // ── Discount helpers ─────────────────────────────────────
+  async function setRole(vendorId: string, role: "vendor" | "customer") {
+    setVendorBusy(vendorId);
+    await fetch("/api/admin/vendors", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: vendorId, role }) });
+    await loadVendors();
+    setVendorBusy(null);
+  }
+
   async function handleAddDiscount(e: React.FormEvent) {
     e.preventDefault();
     if (!discForm.label.trim()) { setDiscError("Label is required."); return; }
-    if (discForm.value <= 0)    { setDiscError("Value must be > 0."); return; }
+    if (discForm.value <= 0) { setDiscError("Value must be > 0."); return; }
     setDiscError(""); setDiscSaving(true);
-
     await fetch("/api/discounts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        label:      discForm.label,
-        type:       discForm.type,
-        value:      discForm.value,
-        product_id: discForm.product_id || null,
-        active:     discForm.active,
-        ends_at:    discForm.ends_at || null,
-      }),
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label: discForm.label, type: discForm.type, value: discForm.value, product_id: discForm.product_id || null, active: discForm.active, ends_at: discForm.ends_at || null }),
     });
-
     await loadDiscounts();
     setDiscForm({ label: "", type: "percentage", value: 0, product_id: "", active: true, ends_at: "" });
     setDiscSaving(false);
   }
-
   async function toggleDiscount(d: DbDiscount) {
-    await fetch(`/api/discounts`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: d.id, active: !d.active }),
-    });
+    await fetch("/api/discounts", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: d.id, active: !d.active }) });
     await loadDiscounts();
   }
-
   async function deleteDiscount(id: string) {
     await fetch(`/api/discounts?id=${id}`, { method: "DELETE" });
     await loadDiscounts();
   }
 
-  // ── Stats ────────────────────────────────────────────────
-  const activeDiscounts = discounts.filter((d) => d.active).length;
-  const inStockCount    = products.filter((p) => p.in_stock).length;
-
-  // ════════════════════════════════════════════════════════
-  //  PRODUCT FORM VIEW
-  // ════════════════════════════════════════════════════════
   if (view === "add" || view === "edit") {
     return (
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="flex items-center gap-3 mb-8">
-          <button onClick={() => setView("list")} className="p-2 rounded-full hover:bg-[rgba(201,146,42,0.1)] transition-colors" style={{ color: "var(--text-muted)" }} aria-label="Back">
-            <X className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-2xl font-black gold-text">{view === "add" ? "Add New Product" : "Edit Product"}</h1>
-            <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>All fields marked * are required</p>
-          </div>
-        </div>
-        <hr className="gold-divider mb-8" />
-
-        <div className="luxury-card p-6 space-y-6">
-          {/* Name */}
-          <Field label="Product Name" required>
-            <input type="text" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Campus Hoodie" className="admin-input" />
-          </Field>
-
-          {/* Category */}
-          <Field label="Category" required>
-            <select value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value as Category }))} className="admin-input">
-              <optgroup label="Men">
-                {CATEGORY_SECTIONS.men.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
-              </optgroup>
-              <optgroup label="Women">
-                {CATEGORY_SECTIONS.women.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
-              </optgroup>
-            </select>
-          </Field>
-
-          {/* Price */}
-          <Field label="Price (₦)" required>
-            <input type="number" min={0} value={form.price || ""} onChange={(e) => setForm((f) => ({ ...f, price: Number(e.target.value) }))} placeholder="e.g. 6500" className="admin-input" />
-          </Field>
-
-          {/* Product Image */}
-          <Field label="Product Image" required hint="Upload a photo from your device, or paste a direct image URL below">
-            <div
-              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={(e) => {
-                e.preventDefault();
-                setDragOver(false);
-                const file = e.dataTransfer.files?.[0];
-                if (file) handleImageFile(file);
-              }}
-              onClick={() => fileInputRef.current?.click()}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInputRef.current?.click(); } }}
-              className="relative flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-2xl px-4 py-8 cursor-pointer transition-all"
-              style={{
-                borderColor: dragOver ? "var(--gold-primary)" : "var(--border-color)",
-                background: dragOver ? "rgba(201,146,42,0.06)" : "var(--bg-secondary)",
-              }}
-              aria-label="Upload product image"
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onClick={(e) => e.stopPropagation()}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleImageFile(file);
-                }}
-              />
-              {uploadingImage ? (
-                <>
-                  <div className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "var(--gold-primary)", borderTopColor: "transparent" }} />
-                  <p className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>Uploading image…</p>
-                </>
-              ) : form.image ? (
-                <>
-                  <div className="relative w-24 h-24 rounded-xl overflow-hidden border" style={{ borderColor: "var(--border-color)" }}>
-                    <Image src={form.image} alt="Preview" fill sizes="96px" className="object-cover" />
-                  </div>
-                  <p className="text-xs font-semibold" style={{ color: "var(--gold-primary)" }}>Click or drop a new image to replace</p>
-                </>
-              ) : (
-                <>
-                  <ImagePlus className="w-8 h-8 animate-gentle-bounce" style={{ color: "var(--gold-primary)" }} />
-                  <p className="text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>Click to upload or drag &amp; drop</p>
-                  <p className="text-xs" style={{ color: "var(--text-muted)" }}>JPG, PNG or WebP, up to 5MB</p>
-                </>
-              )}
-            </div>
-
-            {imageUploadError && <p className="text-xs text-red-500 mt-2">{imageUploadError}</p>}
-
-            <details className="mt-3">
-              <summary className="text-xs font-semibold cursor-pointer select-none" style={{ color: "var(--text-muted)" }}>
-                Or paste an image URL instead
-              </summary>
-              <input
-                type="url"
-                value={form.image}
-                onChange={(e) => setForm((f) => ({ ...f, image: e.target.value }))}
-                placeholder="https://.../product.jpg"
-                className="admin-input mt-2"
-              />
-            </details>
-          </Field>
-
-          {/* Description */}
-          <Field label="Description">
-            <textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} rows={3} className="admin-input resize-none" placeholder="Brief product description…" />
-          </Field>
-
-          {/* Sizes */}
-          <Field label="Sizes" required>
-            <div className="flex flex-wrap gap-2 mb-3">
-              {SIZE_OPTIONS.map((s) => (
-                <button key={s} type="button" onClick={() => toggleSize(s)} className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${form.sizes.includes(s) ? "btn-gold border-transparent" : "btn-ghost-gold"}`} aria-pressed={form.sizes.includes(s)}>{s}</button>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <input type="text" value={customSize} onChange={(e) => setCustomSize(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); if (customSize.trim()) { toggleSize(customSize.trim()); setCustomSize(""); } } }} placeholder="Custom size" className="admin-input flex-1 text-xs py-2" />
-              <button type="button" onClick={() => { if (customSize.trim()) { toggleSize(customSize.trim()); setCustomSize(""); } }} className="btn-ghost-gold px-3 py-2 rounded-full text-xs font-bold">Add</button>
-            </div>
-            {form.sizes.length > 0 && <p className="text-xs mt-2" style={{ color: "var(--text-muted)" }}>Selected: {form.sizes.join(", ")}</p>}
-          </Field>
-
-          {/* Colors */}
-          <Field label="Colors" required>
-            <div className="flex flex-wrap gap-2 mb-3">
-              {COLOR_OPTIONS.map((c) => (
-                <button key={c} type="button" onClick={() => toggleColor(c)} className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${form.colors.includes(c) ? "btn-gold border-transparent" : "btn-ghost-gold"}`} aria-pressed={form.colors.includes(c)}>{c}</button>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <input type="text" value={customColor} onChange={(e) => setCustomColor(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); if (customColor.trim()) { toggleColor(customColor.trim()); setCustomColor(""); } } }} placeholder="Custom color" className="admin-input flex-1 text-xs py-2" />
-              <button type="button" onClick={() => { if (customColor.trim()) { toggleColor(customColor.trim()); setCustomColor(""); } }} className="btn-ghost-gold px-3 py-2 rounded-full text-xs font-bold">Add</button>
-            </div>
-            {form.colors.length > 0 && <p className="text-xs mt-2" style={{ color: "var(--text-muted)" }}>Selected: {form.colors.join(", ")}</p>}
-          </Field>
-
-          {/* Toggles */}
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="In Stock">
-              <button type="button" onClick={() => setForm((f) => ({ ...f, in_stock: !f.in_stock }))} className="flex items-center gap-2 text-sm font-semibold" style={{ color: form.in_stock ? "#22c55e" : "#ef4444" }} aria-pressed={form.in_stock}>
-                {form.in_stock ? <ToggleRight className="w-6 h-6" /> : <ToggleLeft className="w-6 h-6" />}
-                {form.in_stock ? "Yes" : "No"}
-              </button>
-            </Field>
-            <Field label="Featured">
-              <button type="button" onClick={() => setForm((f) => ({ ...f, featured: !f.featured }))} className="flex items-center gap-2 text-sm font-semibold" style={{ color: form.featured ? "var(--gold-primary)" : "var(--text-muted)" }} aria-pressed={form.featured}>
-                {form.featured ? <ToggleRight className="w-6 h-6" /> : <ToggleLeft className="w-6 h-6" />}
-                {form.featured ? "Yes" : "No"}
-              </button>
-            </Field>
-          </div>
-
-          {formError && <div className="px-4 py-3 rounded-xl text-sm text-red-600 bg-red-50 dark:bg-red-900/20 border border-red-200">{formError}</div>}
-
-          <div className="flex gap-3 pt-2">
-            <button onClick={() => setView("list")} className="flex-1 btn-ghost-gold py-3 rounded-full font-bold text-sm">Cancel</button>
-            <button onClick={handleSave} disabled={saving} className="btn-gold flex items-center justify-center gap-2 px-8 py-3 rounded-full font-bold text-sm disabled:opacity-60" style={{ flex: 2 }}>
-              {saveOk ? <><Check className="w-4 h-4" /> Saved!</> : saving ? "Saving…" : <><Package className="w-4 h-4" /> {view === "add" ? "Add Product" : "Save Changes"}</>}
-            </button>
-          </div>
-        </div>
-      </div>
+      <ProductForm
+        mode={view}
+        title={view === "add" ? "Add New Product" : "Edit Product"}
+        initial={editing ? toFormValues(editing) : EMPTY_PRODUCT_FORM}
+        pricingMode={editing?.vendor_id ? "vendor" : "store"}
+        viewerIsVendor={false}
+        showFeatured
+        onSubmit={submitProduct}
+        onCancel={() => setView("list")}
+      />
     );
   }
 
-  // ════════════════════════════════════════════════════════
-  //  MAIN DASHBOARD
-  // ════════════════════════════════════════════════════════
+  const activeDiscounts = discounts.filter((d) => d.active).length;
+  const inStockCount = products.filter((p) => p.in_stock).length;
+  const visibleProducts = products.filter((p) =>
+    vendorFilter === "all" ? true : vendorFilter === "mine" ? p.vendor_id === null : p.vendor_id === vendorFilter
+  );
+
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      {/* Header */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
         <div className="flex items-center gap-2">
           <Package className="w-6 h-6" style={{ color: "var(--gold-primary)" }} />
           <h1 className="text-3xl font-black gold-text">Admin Panel</h1>
         </div>
         <div className="flex items-center gap-3">
-          {tab !== "analytics" && <button onClick={() => { loadProducts(); loadDiscounts(); }}
-            className="p-2 rounded-full hover:bg-[rgba(201,146,42,0.1)] transition-colors" style={{ color: "var(--text-muted)" }} aria-label="Refresh products and discounts">
-            <RefreshCw className="w-4 h-4" />
-          </button>}
+          {tab !== "analytics" && (
+            <button onClick={() => { loadProducts(); loadDiscounts(); loadVendors(); }}
+              className="p-2 rounded-full hover:bg-[rgba(201,146,42,0.1)] transition-colors" style={{ color: "var(--text-muted)" }} aria-label="Refresh products and discounts">
+              <RefreshCw className="w-4 h-4" />
+            </button>
+          )}
           <button onClick={async () => { await signOut(); router.push("/"); }}
             className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-full border hover:border-red-400 hover:text-red-500 transition-all" style={{ borderColor: "var(--border-color)", color: "var(--text-muted)" }}>
             <LogOut className="w-4 h-4" /> Sign Out
@@ -426,13 +207,13 @@ export function AdminClient() {
         </div>
       </div>
 
-      {/* Stats */}
       {tab !== "analytics" && !statsLoading && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8">
           {[
             { icon: <Package className="w-5 h-5" />, label: "Products", value: products.length },
+            { icon: <Store className="w-5 h-5" />, label: "Vendor Products", value: products.filter((p) => p.vendor_id).length },
             { icon: <ShoppingBag className="w-5 h-5" />, label: "In Stock", value: inStockCount },
-            { icon: <Star className="w-5 h-5" />, label: "Featured", value: products.filter((p) => p.featured).length },
+            { icon: <Users className="w-5 h-5" />, label: "Vendors", value: vendors.filter((v) => v.role === "vendor").length },
             { icon: <Tag className="w-5 h-5" />, label: "Active Sales", value: activeDiscounts },
           ].map((s) => (
             <div key={s.label} className="luxury-card p-4 flex items-center gap-3">
@@ -448,13 +229,12 @@ export function AdminClient() {
 
       <hr className="gold-divider mb-6" />
 
-      {/* Tabs */}
       <div className="flex flex-wrap gap-2 mb-6" role="group" aria-label="Admin sections">
-        {(["analytics", "products", "discounts"] as Tab[]).map((t) => (
+        {(["analytics", "products", "vendors", "discounts"] as Tab[]).map((t) => (
           <button key={t} onClick={() => setTab(t)}
             aria-pressed={tab === t}
             className={`min-h-11 px-5 py-2 rounded-full text-sm font-bold capitalize transition-all ${tab === t ? "btn-gold" : "btn-ghost-gold"}`}>
-            {t === "analytics" ? "Analytics" : t === "discounts" ? "Sales & Discounts" : "Products"}
+            {t === "analytics" ? "Analytics" : t === "discounts" ? "Sales & Discounts" : t === "vendors" ? "Vendors" : "Products"}
           </button>
         ))}
       </div>
@@ -464,24 +244,36 @@ export function AdminClient() {
       {/* ── PRODUCTS TAB ── */}
       {tab === "products" && (
         <>
-          <div className="flex justify-between items-center mb-4">
-            <p className="text-sm" style={{ color: "var(--text-muted)" }}>{products.length} product{products.length !== 1 ? "s" : ""}</p>
-            <button onClick={startAdd} className="btn-gold flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold">
-              <Plus className="w-4 h-4" /> Add Product
-            </button>
+          <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
+            <p className="text-sm" style={{ color: "var(--text-muted)" }}>{visibleProducts.length} of {products.length} product{products.length !== 1 ? "s" : ""}</p>
+            <div className="flex items-center gap-3">
+              <label className="text-xs font-semibold" style={{ color: "var(--text-muted)" }}>
+                <span className="sr-only">Filter by uploader</span>
+                <select value={vendorFilter} onChange={(e) => setVendorFilter(e.target.value)} className="admin-input text-xs py-2 min-w-40">
+                  <option value="all">All uploads</option>
+                  <option value="mine">My products</option>
+                  {vendors.filter((v) => v.role === "vendor").map((v) => (
+                    <option key={v.id} value={v.id}>{v.fullName || v.email}</option>
+                  ))}
+                </select>
+              </label>
+              <button onClick={startAdd} className="btn-gold flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold">
+                <Plus className="w-4 h-4" /> Add Product
+              </button>
+            </div>
           </div>
 
           <div className="overflow-x-auto rounded-2xl border" style={{ borderColor: "var(--border-color)" }}>
             <table className="w-full text-sm" style={{ background: "var(--bg-card)" }}>
               <thead>
                 <tr style={{ borderBottom: "1px solid var(--border-color)", background: "rgba(201,146,42,0.05)" }}>
-                  {["Image","Name","Category","Price","Stock","Featured","Actions"].map((h) => (
+                  {["Image", "Name", "Uploaded by", "Category", "Price", "Stock", "Featured", "Actions"].map((h) => (
                     <th key={h} className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {products.map((p) => (
+                {visibleProducts.map((p) => (
                   <tr key={p.id} className="border-b last:border-b-0 hover:bg-[rgba(201,146,42,0.03)] transition-colors" style={{ borderColor: "var(--border-color)" }}>
                     <td className="px-4 py-3">
                       <div className="relative w-12 h-12 rounded-lg overflow-hidden">
@@ -493,9 +285,17 @@ export function AdminClient() {
                       <p className="text-xs truncate max-w-[160px]" style={{ color: "var(--text-muted)" }}>{p.sizes.join(", ")}</p>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: "rgba(201,146,42,0.1)", color: "var(--gold-primary)" }}>{getCategoryLabel(p.category)}</span>
+                      <span className="text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap" style={{ background: p.vendor_id ? "rgba(201,146,42,0.1)" : "rgba(34,197,94,0.1)", color: p.vendor_id ? "var(--gold-primary)" : "#22c55e" }}>
+                        {vendorLabel(p.vendor_id)}
+                      </span>
                     </td>
-                    <td className="px-4 py-3"><span className="font-bold gold-text">{formatPrice(p.price)}</span></td>
+                    <td className="px-4 py-3">
+                      <span className="text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap" style={{ background: "rgba(201,146,42,0.1)", color: "var(--gold-primary)" }}>{getCategoryLabel(p.category)}</span>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className="font-bold gold-text">{formatPrice(p.price)}</span>
+                      {p.vendor_id && <span className="block text-[10px]" style={{ color: "var(--text-muted)" }}>vendor {formatPrice(Number(p.vendor_price ?? 0))}</span>}
+                    </td>
                     <td className="px-4 py-3">
                       <button onClick={() => toggleStock(p)} className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: p.in_stock ? "#22c55e" : "#ef4444" }}>
                         {p.in_stock ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
@@ -517,16 +317,75 @@ export function AdminClient() {
                     </td>
                   </tr>
                 ))}
+                {visibleProducts.length === 0 && (
+                  <tr><td colSpan={8} className="px-4 py-8 text-center text-sm" style={{ color: "var(--text-muted)" }}>No products match this filter.</td></tr>
+                )}
               </tbody>
             </table>
           </div>
         </>
       )}
 
+      {/* ── VENDORS TAB ── */}
+      {tab === "vendors" && (
+        <div>
+          <div className="luxury-card p-5 mb-6 flex items-start gap-3">
+            <ShieldCheck className="w-5 h-5 mt-0.5 shrink-0" style={{ color: "var(--gold-primary)" }} />
+            <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+              Promote an account to <strong>vendor</strong> so it can sign in and manage its own products at <code>/vendor</code>.
+              Vendors only ever see, edit and delete the products they upload. Demote to remove their access.
+            </p>
+          </div>
+
+          <div className="overflow-x-auto rounded-2xl border" style={{ borderColor: "var(--border-color)" }}>
+            <table className="w-full text-sm" style={{ background: "var(--bg-card)" }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid var(--border-color)", background: "rgba(201,146,42,0.05)" }}>
+                  {["Account", "Role", "Products", "Action"].map((h) => (
+                    <th key={h} className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {vendors.map((v) => (
+                  <tr key={v.id} className="border-b last:border-b-0 hover:bg-[rgba(201,146,42,0.03)]" style={{ borderColor: "var(--border-color)" }}>
+                    <td className="px-4 py-3">
+                      <p className="font-semibold" style={{ color: "var(--text-primary)" }}>{v.fullName || v.email}</p>
+                      <p className="text-xs" style={{ color: "var(--text-muted)" }}>{v.email}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-xs font-semibold px-2.5 py-1 rounded-full capitalize" style={{ background: v.role === "vendor" ? "rgba(201,146,42,0.12)" : "var(--bg-secondary)", color: v.role === "vendor" ? "var(--gold-primary)" : "var(--text-muted)" }}>
+                        {v.isOwner ? "Owner" : v.role}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 tabular-nums" style={{ color: "var(--text-secondary)" }}>{v.productCount}</td>
+                    <td className="px-4 py-3">
+                      {v.isOwner ? (
+                        <span className="text-xs" style={{ color: "var(--text-muted)" }}>Supreme access</span>
+                      ) : (
+                        <button
+                          onClick={() => setRole(v.id, v.role === "vendor" ? "customer" : "vendor")}
+                          disabled={vendorBusy === v.id}
+                          className={`text-xs font-bold px-3 py-1.5 rounded-full border transition-all disabled:opacity-50 ${v.role === "vendor" ? "btn-ghost-gold" : "btn-gold border-transparent"}`}
+                        >
+                          {vendorBusy === v.id ? "Saving…" : v.role === "vendor" ? "Remove vendor" : "Make vendor"}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {vendors.length === 0 && (
+                  <tr><td colSpan={4} className="px-4 py-8 text-center text-sm" style={{ color: "var(--text-muted)" }}>No accounts found.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* ── DISCOUNTS TAB ── */}
       {tab === "discounts" && (
         <div className="space-y-8">
-          {/* Add discount form */}
           <div className="luxury-card p-6">
             <h2 className="text-lg font-black mb-5 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
               <Tag className="w-5 h-5" style={{ color: "var(--gold-primary)" }} /> Create Sale / Discount
@@ -537,12 +396,12 @@ export function AdminClient() {
               </Field>
               <Field label="Applies to product (leave blank for site-wide)">
                 <select value={discForm.product_id ?? ""} onChange={(e) => setDiscForm((f) => ({ ...f, product_id: e.target.value || null }))} className="admin-input">
-                    <option value="">All products (site-wide)</option>
+                  <option value="">All products (site-wide)</option>
                   {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </Field>
               <Field label="Discount Type">
-                <select value={discForm.type} onChange={(e) => setDiscForm((f) => ({ ...f, type: e.target.value as "percentage"|"fixed" }))} className="admin-input">
+                <select value={discForm.type} onChange={(e) => setDiscForm((f) => ({ ...f, type: e.target.value as "percentage" | "fixed" }))} className="admin-input">
                   <option value="percentage">Percentage (%) off</option>
                   <option value="fixed">Fixed amount (₦) off</option>
                 </select>
@@ -568,7 +427,6 @@ export function AdminClient() {
             </form>
           </div>
 
-          {/* Discounts list */}
           <div>
             <h2 className="text-lg font-black mb-4" style={{ color: "var(--text-primary)" }}>Active &amp; Past Discounts</h2>
             {discounts.length === 0 ? (
@@ -578,7 +436,7 @@ export function AdminClient() {
                 <table className="w-full text-sm" style={{ background: "var(--bg-card)" }}>
                   <thead>
                     <tr style={{ borderBottom: "1px solid var(--border-color)", background: "rgba(201,146,42,0.05)" }}>
-                      {["Label","Type","Value","Scope","Ends","Status",""].map((h) => (
+                      {["Label", "Type", "Value", "Scope", "Ends", "Status", ""].map((h) => (
                         <th key={h} className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>{h}</th>
                       ))}
                     </tr>

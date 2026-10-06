@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getAdminDb } from "@/lib/supabase/admin";
+import { getCaller } from "@/lib/authz";
+import { buildProductInsert, validateProduct } from "@/lib/vendorProduct";
 import { categoryDbValues, normalizeCategory } from "@/lib/products";
 import type { Category } from "@/lib/types";
 
@@ -27,17 +29,26 @@ export async function GET(request: NextRequest) {
   return NextResponse.json(data ?? []);
 }
 
-// POST /api/products — admin only
+// POST /api/products — owner or vendor (vendors create their own products)
 export async function POST(request: NextRequest) {
-  const { data: { user } } = await (await createClient()).auth.getUser();
-  if (!user || user.email !== process.env.NEXT_PUBLIC_ADMIN_EMAIL) {
+  const caller = await getCaller();
+  if (!caller.isOwner && !caller.isVendor) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await request.json();
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  const invalid = validateProduct(body, caller.isVendor);
+  if (invalid) return NextResponse.json({ error: invalid }, { status: 400 });
+
   const { data, error } = await getAdminDb()
     .from("products")
-    .insert(body)
+    .insert(buildProductInsert(caller, body))
     .select()
     .single();
 

@@ -8,6 +8,43 @@ The analytics implementation is complete, deployed to Vercel production, and
 active against the live Supabase project `wmgnwtyhqfazkdbzlewz`. The old plan
 below is archived and must not be followed as an outstanding implementation checklist.
 
+## Multi-Vendor (added 2026-10-06)
+
+The store owner keeps a supreme panel; other sellers get a scoped vendor panel.
+
+- **Owner** (`NEXT_PUBLIC_ADMIN_EMAIL`): full admin panel at `/admin` — Analytics,
+  Products (all uploads, with an "Uploaded by" column and filter), Vendors, and
+  Sales & Discounts. Only the owner ever sees analytics.
+- **Vendor**: `profiles.role = 'vendor'`. Panel at `/vendor` shows only their own
+  products (add / edit / delete / stock). No analytics, no discounts, no featured.
+- **Promotion**: the owner promotes an account to vendor from the new **Vendors**
+  tab (`PATCH /api/admin/vendors`). The owner's own role can never be changed there.
+- **Pricing**: a vendor sets their own price; the customer-facing price is
+  `vendor_price + OWNER_MARKUP` (₦500). The server computes it (`lib/vendorProduct.ts`)
+  so a vendor cannot tamper with `price`, `markup`, `vendor_id`, or `featured`.
+  Store-owned products have `vendor_id = null` and are never visible to vendors.
+- **Defence in depth**: authorization is enforced in the API routes (`lib/authz.ts`)
+  and again in Postgres RLS (`supabase/vendors.sql`, helpers `is_owner()` /
+  `is_vendor()`). Uploads are namespaced per user (`<uid>/file`) and folder-isolated.
+- Public storefront still lists every product (owner + vendors).
+
+**Action required:** run `supabase/vendors.sql` once in the Supabase SQL Editor
+(Role `postgres`). It is idempotent and safe to re-run. Until it runs, the owner
+panel and storefront still work (owner product writes omit the new columns), but
+the Vendors tab and `/vendor` do nothing useful.
+
+### Verification
+
+- `npm test` (22 tests): analytics + vendor scoping. Covers owner/vendor/customer
+  writes, cross-vendor edit/delete denial, server-computed markup, tamper resistance,
+  `/api/vendor/products` scoping, and owner-only vendor promotion.
+- `npx tsc --noEmit` and `npm run build` pass (routes `/vendor`,
+  `/api/vendor/products`, `/api/admin/vendors` present).
+- Isolated PGlite run of `supabase/vendors.sql`: `is_owner`/`is_vendor`, RLS write
+  rules, cross-vendor denial, owner override, storage folder isolation, idempotent re-run.
+- Browser render of the real vendor panel (mocked auth/data): own-products list, no
+  analytics, vendor vs customer pricing, fee hint, POST on add, non-vendor redirect.
+
 ### Completed
 
 - Analytics is the default admin tab; Products and Sales & Discounts remain intact.
