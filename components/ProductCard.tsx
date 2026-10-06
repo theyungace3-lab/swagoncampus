@@ -8,6 +8,7 @@ import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { Product } from "@/lib/types";
 import { useCart } from "@/contexts/CartContext";
 import { formatPrice, getCategoryLabel } from "@/lib/products";
+import { waOrderUrl } from "@/lib/whatsapp";
 
 interface ProductCardProps {
   product: Product;
@@ -21,10 +22,9 @@ export function ProductCard({ product }: ProductCardProps) {
   const defaultSize = product.sizes[0] ?? "One Size";
   const defaultColor = product.colors[0] ?? "Default";
 
-  const whatsappMessage = encodeURIComponent(
+  const whatsappUrl = waOrderUrl(
     `Hello, I'd like to place an order for: *${product.name}* (${formatPrice(product.price)})`
   );
-  const whatsappUrl = `https://wa.me/2348185319037?text=${whatsappMessage}`;
 
   function handleAddToCart(e: React.MouseEvent) {
     e.preventDefault();
@@ -140,6 +140,7 @@ export function ProductCard({ product }: ProductCardProps) {
 
           <a
             href={whatsappUrl}
+            data-analytics-checkout="true"
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}

@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { CartProvider } from "@/contexts/CartContext";
 import { ProductsProvider } from "@/contexts/ProductsContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { AnalyticsProvider } from "@/components/AnalyticsProvider";
 import { SiteChrome } from "@/components/SiteChrome";
 
 const geist = Geist({
@@ -57,11 +58,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-screen flex flex-col js" style={{ background: "var(--bg-primary)" }}>
         <ThemeProvider>
           <AuthProvider>
-            <ProductsProvider>
-              <CartProvider>
-                <SiteChrome>{children}</SiteChrome>
-              </CartProvider>
-            </ProductsProvider>
+            <AnalyticsProvider>
+              <ProductsProvider>
+                <CartProvider>
+                  <SiteChrome>{children}</SiteChrome>
+                </CartProvider>
+              </ProductsProvider>
+            </AnalyticsProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

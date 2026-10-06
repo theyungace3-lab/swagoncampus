@@ -3,6 +3,7 @@ import { Mail, MapPin, Phone } from "lucide-react";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { BrandMark } from "@/components/BrandMark";
 import { CATEGORY_SECTIONS } from "@/lib/products";
+import { waOrderUrl, WA_ORDER_MESSAGE } from "@/lib/whatsapp";
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -114,7 +115,7 @@ export function Footer() {
               </li>
             </ul>
             <a
-              href="https://wa.me/2348185319037?text=Hello%2C%20I%27d%20like%20to%20place%20an%20order"
+              href={waOrderUrl(WA_ORDER_MESSAGE)}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 hover:scale-105"

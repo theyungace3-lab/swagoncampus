@@ -6,6 +6,7 @@ import { X, Trash2, ShoppingBag } from "lucide-react";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { useCart } from "@/contexts/CartContext";
 import { formatPrice } from "@/lib/products";
+import { waOrderUrl, WA_ORDER_MESSAGE } from "@/lib/whatsapp";
 
 export function CartDrawer() {
   const { state, removeFromCart, updateQuantity, closeCart, cartTotal } = useCart();
@@ -18,13 +19,13 @@ export function CartDrawer() {
           item.product.price * item.quantity
         )}`
     )
-    .join("%0A");
+    .join("\n");
 
-  const whatsappMessage = encodeURIComponent(
-    `Hello, I'd like to place an order`
-  ) + (items.length > 0 ? `:%0A%0A${whatsappLines}%0A%0A*Total: ${formatPrice(cartTotal)}*` : "");
-
-  const whatsappUrl = `https://wa.me/2348185319037?text=${whatsappMessage}`;
+  const whatsappUrl = waOrderUrl(
+    items.length > 0
+      ? `${WA_ORDER_MESSAGE}:\n\n${whatsappLines}\n\n*Total: ${formatPrice(cartTotal)}*`
+      : WA_ORDER_MESSAGE
+  );
 
   return (
     <>
@@ -229,6 +230,7 @@ export function CartDrawer() {
             {/* WhatsApp Checkout */}
             <a
               href={whatsappUrl}
+              data-analytics-checkout="true"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-2 w-full py-3 rounded-full text-sm font-bold transition-all duration-200 hover:scale-[1.02]"

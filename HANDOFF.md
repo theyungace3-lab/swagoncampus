@@ -1,91 +1,290 @@
-# SwagOnCampus Handoff Document
+# HANDOFF — Real-Time Analytics for the Admin Panel
 
-You are continuing work on the **SwagOnCampus** clothing site at `C:\Users\HomePC\Downloads\SwagOnCampus`.
-It is a Next.js (App Router) + Supabase e-commerce store for FUNAAB students. Orders happen via WhatsApp (number `2348185319037`, hardcoded in several components). Live at `https://swagoncampus.vercel.app`. The git remote embeds a working token, so `git push origin main` needs no sign-in.
+Last updated: 2026-10-06.
 
-Read this file first, then resume where the prior session stopped.
+## Current Status
 
----
+The analytics implementation is complete, deployed to Vercel production, and
+active against the live Supabase project `wmgnwtyhqfazkdbzlewz`. The old plan
+below is archived and must not be followed as an outstanding implementation checklist.
 
-## Where things stand
+### Completed
 
-The repo has moved well past the old hydration-bug era. These are **all committed and pushed to `origin/main`**:
+- Analytics is the default admin tab; Products and Sales & Discounts remain intact.
+- The local admin email is now `theyungace3@gmail.com`.
+- Dashboard metrics include active visitors, today's and total visitors, registered
+  accounts, unique checkout visitors, checkout clicks, WhatsApp clicks, pageviews,
+  add-to-cart actions, and recorded database orders.
+- Accounts come from `auth.users`, not client-reported signup events or profile dates.
+- Route tracking is mounted globally and excludes admin/API paths. Anonymous browser
+  IDs persist in localStorage, with an in-memory fallback when storage is blocked.
+- Visible tabs send a heartbeat every minute. Active means seen within 5 minutes;
+  heartbeats do not inflate pageviews or clutter the activity feed.
+- Only actual product/cart order-link activations emit `checkout_start`. Opening
+  a cart does NOT count as checkout, and genuine clicks/add actions are not throttled.
+- Each checkout emits one event and is included in both checkout and WhatsApp totals.
+  General Hero/Footer contact links emit `whatsapp_click`. These are not completed sales.
+- All order-link surfaces are marked: ProductCard, ProductDetailClient,
+  CartDrawer, and the cart page; Hero/Footer use the same store number through
+  the shared `lib/whatsapp.ts` helper (`2348103843353`).
+- Realtime notifications cover analytics events, new profiles, and orders, with
+  coalesced refreshes, a 20-second polling backup, visibility handling, pause/resume,
+  cleanup, and explicit stale/error/setup states.
+- Charts include an accessible hourly data table, shopping-intent percentages,
+  top pages, and recent actions. Day and hour boundaries use `Africa/Lagos`.
+- Ingestion validates origins (including loopback/proxy hosts), streamed body size,
+  event types, IDs, and paths. It strips query strings and fragments.
+- Only the server may insert analytics rows. The summary RPC is service-role-only,
+  the GET endpoint verifies the signed-in owner, and raw event SELECT is owner-only.
+- No new project dependencies were added. `npm run test:analytics` uses the existing
+  TypeScript package and Node's test runner.
 
-| Commit | What it did |
-|--------|-------------|
-| `5fda782` | module-level Supabase singleton; ignore `INITIAL_SESSION` in auth callback |
-| `da06e1e` | 6 categories, removed sparkles/dashes/copy, animations, admin image upload |
-| `dfa32df` | **fixed the `Reveal` hydration mismatch** + safe no-JS CSS fallback in `globals.css` + `js` class on `<body>` |
-| `e552577` | hid the site navbar/footer/cart drawer on the `/admin` panel (new `components/SiteChrome.tsx`) |
-| `db13940` | Temu-style silent add-to-cart + floating cart button (`components/FloatingCartButton.tsx`) |
-| `659a427` | replaced category icons with monochrome gold line icons |
-| `678cdd5` | category cards now use **real photos** in `public/categories/*.jpg` |
-| `79f736a` | **brand identity**: `components/BrandMark.tsx`, `app/icon.svg`, `app/apple-icon.png`, `app/opengraph-image.png`, `app/twitter-image.png`, `public/social/whatsapp-status.png`, generator script `scripts/brand-assets.cjs`, metadata in `app/layout.tsx` |
+### Post-Review Fixes
 
-`HEAD` is `79f736a` and matches `origin/main` (0 commits ahead).
+Addressed all findings from the `/review uncommitted` pass:
 
----
+- **Owner identity is one source.** `public.analytics_admin_email()` is the single
+  place the owner email lives; all three RLS policies use it. It honours
+  `app.admin_email` (matching `schema.sql`) and falls back to the owner literal.
+- **Summary query is indexed.** `analytics_summary()` is now a SQL function whose
+  figures are individual sargable subqueries (no single full-scan aggregate), plus
+  a new `(type, visitor_id)` index for the all-time distinct counts.
+- **No unused aggregation.** The `byType` block and its `EventTotal` type were removed.
+- **Realtime is throttled.** The dashboard ignores `heartbeat` inserts and enforces a
+  10-second minimum gap between realtime-triggered refetches, so traffic bursts cannot
+  turn the 20s backup poll into a ~1 Hz loop.
+- **Ingest is rate-limited.** Best-effort per-visitor (60/min) and per-IP (240/min)
+  fixed windows return `429` with `Retry-After`; documented as a per-instance speed bump.
+- **Event types are one source.** `ANALYTICS_EVENT_TYPES` in `lib/supabase/types.ts`
+  drives both the `AnalyticsEventType` union and the API whitelist.
+- **WhatsApp number is one source.** `lib/whatsapp.ts` holds the number and message
+  helper used by all six `wa.me` surfaces.
 
-## The UNCOMMITTED work sitting in the working tree
+**Re-run `supabase/analytics.sql` in the Supabase SQL Editor** to apply the SQL-side
+fixes (index, owner-email helper, policies, summary function). The app works without
+it, but the query and policy improvements require it. It is idempotent.
 
-The last user request had four parts. The **code is already written** (build passes, `npx eslint` clean on the touched files — the one remaining error is a pre-existing `react-hooks/set-state-in-effect` warning at `components/Navbar.tsx` around the `setMounted` effect, not introduced here). What's left is to **verify, commit, and push**.
+### Deployment (Done)
 
-### 1. Header now exposes all 6 categories
-`components/Navbar.tsx`:
-- `navLinks` was trimmed to just Home + Shop.
-- A **Categories dropdown** (desktop) and a **categories section** (mobile menu) now list all six categories, built from `CATEGORIES` in `lib/products.ts` so it stays in sync.
-- `ChevronDown` toggles the dropdown; click-outside closes it.
+- Production: `https://swagoncampus.vercel.app` (Vercel project `samad8/swagoncampus`).
+- `supabase/analytics.sql` was executed in the live project's SQL Editor
+  ("Success. No rows returned").
+- Production env: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and
+  `NEXT_PUBLIC_ADMIN_EMAIL=theyungace3@gmail.com` were already correct.
+  `SUPABASE_SERVICE_ROLE_KEY` was an 11-character placeholder and was replaced with
+  the real `service_role` key for this project (stored as a Sensitive variable).
+- Live checks: the table and `analytics_summary` RPC respond to the service role
+  (5 existing accounts counted, 0 visitors at activation time); an unauthenticated
+  `GET /api/analytics` returns 401; a `heartbeat` POST returned 201 and the row was
+  confirmed in Supabase and then removed, leaving no test data. `/`, `/shop`, `/cart`,
+  `/auth/signin`, and `/admin` all return 200.
 
-### 2. "Add to Cart" no longer overlaps on narrow cards
-`components/ProductCard.tsx` — the actions row was rebuilt:
-- The add-to-cart button is now a fixed `h-10` with `whitespace-nowrap`, `min-w-0`, `overflow-hidden` and a `truncate` label.
-- Label is responsive: shows **"Add"** below `sm`, **"Add to Cart"** at `sm` and up.
-- The WhatsApp circle button stays `w-10 h-10` with `flex-shrink-0`.
+### Remaining
 
-### 3. Footer / category links actually change the shop filter
-`app/shop/ShopClient.tsx` — the active category is now **derived from the URL** instead of captured into `useState` once:
-- `activeCategory` is read straight from `useSearchParams()`.
-- A new `selectCategory(next)` helper does `router.replace('/shop?category=…' or '/shop')` with `{ scroll: false }`, so clicking footer/navbar/homepage category links updates the filter even when already mounted on `/shop`.
-- `normalizeCategory()` still handles legacy values.
+- Re-run `supabase/analytics.sql` in the Supabase SQL Editor (see Post-Review Fixes),
+  then rebuild/redeploy so the live app uses the updated summary function and policies.
+- Sign in as `theyungace3@gmail.com`, open `/admin`, and browse the storefront in a
+  separate browser/incognito window to see live activity appear.
 
-### 4. Real WhatsApp logo everywhere
-New `components/WhatsAppIcon.tsx` — the official WhatsApp glyph (standard path data, `fill="currentColor"`). It replaced the generic lucide `MessageCircle` in **six** places:
-- `components/ProductCard.tsx`
-- `components/CartDrawer.tsx`
-- `components/Footer.tsx`
-- `components/HeroSection.tsx`
-- `app/cart/page.tsx`
-- `app/product/[id]/ProductDetailClient.tsx`
+### Verification
 
----
+- `npm run test:analytics`: 12 passing tests for API validation, authorization,
+  origin handling, rate limiting, identity persistence, tracking semantics, failure
+  isolation, Strict Mode deduplication, click capture, and cleanup.
+- `npx tsc --noEmit --incremental false`: passes.
+- `npm run build`: passes.
+- New analytics code and tests pass targeted ESLint checks.
+- Full-project lint still reports pre-existing errors in AdminClient, Navbar,
+  ProductsContext, and `scripts/brand-assets.cjs`; it also scans `.kilo/worktrees`.
+- The SQL was executed and checked in isolated PGlite: zero state, counts,
+  visitor deduplication, heartbeat behavior, account source, Lagos boundaries,
+  idempotent reruns, Realtime publication, RLS, and service-only RPC all pass.
+- The actual React dashboard was browser-tested with mocked API/Realtime at
+  desktop, 390px, and 320px widths: dark mode, reduced motion, no horizontal
+  overflow, hourly table, live refresh, polling fallback, pause/resume, stale/setup
+  states, authorization-loss clearing, and recovery pass.
+- Temporary SQL/browser tools and screenshots are under
+  `C:\Users\HomePC\AppData\Local\Temp\kilo\soc-analytics-check`, not project dependencies.
 
-## Do this next (the actual task)
+### Resume Scope
 
-1. **Verify the uncommitted changes render.** Quick check: run `npm run build` (should pass), optionally `npm run start` and open `/`, `/shop`, `/shop?category=tops`, `/cart` to confirm the navbar dropdown, the category-filter-from-URL behavior, the fixed add-to-cart button, and the WhatsApp logo all look right. Hard-refresh to bust cache.
-2. **Commit and push** (this was the last explicit intent, but confirm with the user if unsure):
-   ```
-   git add -A
-   git commit -m "fix: all categories in header, URL-synced shop filter, WhatsApp logo, no add-to-cart overlap"
-   git push origin main
-   ```
-3. **Watch the Vercel auto-deploy**, then hard-refresh the live site.
+Nothing remains to implement. Keep the security model intact: do not restore public
+database inserts, count cart opens as checkouts, throttle real shopping actions, or
+invent live totals. The `vercel link` command appended `.vercel` and `.env*` to
+`.gitignore`, which is expected and safe to keep.
 
----
+## Archived Plan (Superseded)
 
-## Gotchas / notes
+Everything below is the previous agent's original plan, retained for history.
+It is not the current implementation or a list of remaining tasks.
 
-- **`npx eslint` will always show 1 pre-existing error**: `react-hooks/set-state-in-effect` for `useEffect(() => { setMounted(true) }, [])` in `components/Navbar.tsx`. Not caused by this work. Leave it or fix separately (the mounted-gated rendering is intentional for the `next-themes` toggle).
-- **`Reveal` + `.reveal` CSS + `js` body class** are already fixed and committed (`dfa32df`). Don't regress them. `app/globals.css` only hides `.reveal` when the `js` class is present, so no-JS visitors always see content.
-- The `lucide-react` version in `package.json` is `^1.32.0` (unusual for lucide). Don't "fix" it — it's pinned by the project.
-- The WhatsApp phone number `2348185319037` is hardcoded in `ProductCard`, `CartDrawer`, `Footer`, `HeroSection`, `ProductDetailClient`, and `cart/page.tsx`. If it changes, update all of them.
-- `public/categories/*.jpg` are the real category photos. They are **low-res** (roughly 200–550 px). They're fine for the small category tiles but will look soft on high-DPI phones. If the user supplies crisper images, drop them into `public/categories/` with the same filenames and push.
-- **`scripts/brand-assets.cjs`** regenerates the brand PNGs (og image, apple icon, WhatsApp status). It needs `sharp` (present in `node_modules` via Next). Re-run it if you change the mark, then commit the regenerated PNGs. The `BrandMark.tsx` inline SVG is the source of truth for the in-UI logo.
-- The `.kilo/worktrees/quilt-darkness/` directory is a stale Agent-Manager worktree that is **git-ignored** (it can't be pushed). It gets linted as if it were the repo, which is just noise — ignore it or clean it up separately.
-- `app/ShopClient.tsx` uses `useSearchParams`, which is why `app/shop/page.tsx` wraps it in `<Suspense>`. That pattern is required or the build fails.
+### Original Goal
 
-## Quick orientation
+The admin panel (signed in as the admin email, currently `theyungace3@gmail.com`
+via `NEXT_PUBLIC_ADMIN_EMAIL`) needs a **real-time analytics dashboard**
+showing, at minimum:
 
-- Categories live in `lib/products.ts` (`CATEGORIES`, `LEGACY_CATEGORY_MAP`, `normalizeCategory`).
-- Product data comes from Supabase via `contexts/ProductsContext.tsx` and `app/api/products/route.ts`.
-- The admin panel is at `/admin`, guarded in `app/admin/AdminClient.tsx`; the site chrome is hidden there via `components/SiteChrome.tsx`.
-- Theme tokens (gold/brown, light/dark) are in `app/globals.css` (`:root` and `.dark`).
+- number of visitors on the site (total / today / live now)
+- number of accounts created (profiles table)
+- number of people that proceeded to checkout
+- number of clicks on the checkout / WhatsApp button
+- plus: pageviews, add-to-cart, orders, 24h hourly chart, top pages, live event feed
+
+## What is done (this session)
+
+1. **`supabase/analytics.sql` (NEW, untracked — NOT yet run in Supabase)**
+   - `analytics_events` table: `(id, type, visitor_id, path, user_id, created_at)`
+     with `type` constrained to `pageview | whatsapp_click | checkout_start | add_to_cart`
+   - indexes on `created_at`, `(type, created_at)`, `(visitor_id, created_at)`
+   - RLS: public insert; admin-only select (`current_setting('app.admin_email')`)
+   - `analytics_summary()` plpgsql function returning one jsonb with every metric,
+     an hourly `generate_series` bucket for the last 24h, `topPages`, `byType`,
+     and `recent` (last 12 events). Day boundary uses `Africa/Lagos`.
+     Execute granted only to `service_role`.
+   - Adds the table to the `supabase_realtime` publication (idempotent DO block).
+   - **The file has NOT been run in the Supabase SQL editor yet. Until then, the
+     API returns 500 and the dashboard shows an "unavailable" banner.**
+
+   The file was scanned and is clean (all non-ASCII is intentional comment box-drawing).
+
+## What remains (in order)
+
+2. **`lib/analytics.ts` (NEW, client)** — tracking helper.
+   - `export type AnalyticsEvent = "pageview" | "whatsapp_click" | "checkout_start" | "add_to_cart"`
+   - `getVisitorId()` — stable anonymous id in `localStorage["soc_analytics_visitor"]`
+     (`crypto.randomUUID` with a fallback).
+   - `trackEvent(type, path?, throttled?)` — fire-and-forget `fetch("/api/analytics", {method:"POST", keepalive:true})`,
+     body `{ type, visitor_id, path }`; swallows all errors.
+   - `throttled` means: at most one event of that type per 30s (in-memory Map).
+     Use throttle for `checkout_start` (fired from two places) and `add_to_cart`;
+     no throttle for `pageview` / `whatsapp_click`.
+
+3. **`components/AnalyticsProvider.tsx` (NEW, client)** — mounted in `app/layout.tsx`
+   (inside `AuthProvider`). Two effects, no setState, so it avoids the
+   `react-hooks/set-state-in-effect` lint rule this project enforces:
+   - pageview: `usePathname()`; on change, if path doesn't start with `/admin`,
+     `trackEvent("pageview", pathname)`.
+   - WhatsApp clicks: a document-level `click` listener in **capture** phase that finds
+     the closest `<a>` and, if its `href` starts with `https://wa.me/`, calls
+     `trackEvent("whatsapp_click")`. One listener covers all six WhatsApp anchors
+     (ProductCard, ProductDetailClient, CartDrawer, cart/page, HeroSection, Footer) —
+     no per-site edits needed, and it works because some of those components are
+     server components where you cannot attach onClick.
+
+4. **`app/api/analytics/route.ts` (NEW)** — model on `app/api/orders/route.ts`:
+   - `POST` (public ingest): validate `type` against the 4-value whitelist,
+     `visitor_id` 8–64 chars, `path` starts with `/` and ≤200 chars (else `/`).
+     Insert via `getAdminDb().from("analytics_events")`. Return 400/201/500.
+   - `GET` (admin only): `await createClient()` (server, cookies) →
+     `supabase.auth.getUser()`; require `user.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL`
+     else 401. Then `getAdminDb().rpc("analytics_summary")` and return the jsonb
+     with `Cache-Control: no-store`. If the RPC is missing (migration not run),
+     the Supabase error message surfaces — the client turns that into a friendly banner.
+   - Add `export const dynamic = "force-dynamic";`.
+
+5. **`lib/supabase/types.ts`** — add the `analytics_events` table shape
+   (`Row` / `Insert` / `Update`) to `Database["public"]["Tables"]` and a
+   `DbAnalyticsEvent` alias, matching `supabase/analytics.sql` exactly.
+   Also add a `AnalyticsSummary` interface (numbers as `number`, `hourly`/`topPages`/
+   `byType`/`recent` as arrays of small object shapes) so the dashboard component is typed.
+
+6. **`components/AdminAnalytics.tsx` (NEW, client)** — the dashboard itself.
+   - Fetch `GET /api/analytics` on mount and poll every 20s (`setInterval`, clear on unmount).
+   - **Real-time**: `createClient().channel("analytics-live")` with a
+     `postgres_changes` subscription for `INSERT` on `public.analytics_events` →
+     debounce ~2s then refetch. Unsubscribe + `removeChannel` on unmount.
+     Handle subscription errors gracefully (fall back to polling).
+   - Show a **LIVE** badge (the `badge-pulse` class already exists in globals.css),
+     "updated Xs ago", and an error banner if the API returns 500 (tell the admin
+     to run `supabase/analytics.sql` in Supabase).
+   - KPI cards (reuse `.luxury-card`, `.gold-text`, icons from lucide-react):
+     Visitors now (live), Total visitors (today), Page views (today), Accounts created
+     (7d), Checkout starts (today), WhatsApp clicks (today), Orders (7d), Add-to-cart (today).
+   - Conversion funnel: pageviews → add-to-cart → checkouts → whatsapp clicks,
+     with percentage bars (plain CSS widths, no chart library is installed).
+   - 24h hourly bar chart from `summary.hourly` (two CSS bar columns: pageviews + whatsapp).
+   - Top pages list from `summary.topPages`.
+   - Live event feed from `summary.recent` (type + path + relative time).
+   - `useAuth()` is available in this tree; keep the component purely presentational
+     and fetch from `/api/analytics` (auth happens in the route, not the client).
+
+7. **`app/admin/AdminClient.tsx`** — add `analytics` to `type Tab`, make it the
+   default tab, add a tab button ("Analytics" / "Live Analytics"), render
+   `<AdminAnalytics />` when `tab === "analytics"`. Keep the existing
+   Products / Discounts tabs intact.
+
+8. **Instrument `checkout_start` and `add_to_cart`:**
+   - `components/CartDrawer.tsx` — when `isOpen && items.length > 0`, fire
+     `trackEvent("checkout_start", "/cart", true)` (throttled) in a `useEffect`.
+   - `app/cart/page.tsx` — on mount, if `items.length > 0`, same call (the throttle
+     dedupes the double-fire).
+   - `contexts/CartContext.tsx` — inside `addToCart`, fire `trackEvent("add_to_cart", undefined, true)`
+     after dispatch. (Single choke point — every Add button routes through here.)
+   - **Also fix a real bug found while reading `app/cart/page.tsx`:**
+     `const whatsappUrl = "https://wa.me/2348000000000?..."` uses a placeholder number.
+     Every other WhatsApp link in the repo uses `2348185319037`. Change the /cart page to
+     the same number (flag this to the user; if 2348000000000 was intentional, say so).
+
+## Verification
+
+- `npx tsc --noEmit` must pass.
+- `npm run build` must pass.
+- `npm run lint` — must not add new errors. The repo already ships a known
+  pre-existing `react-hooks/set-state-in-effect` error (in `components/Navbar.tsx`,
+  ~line 31) — leave it; don't let it fail the run, just confirm you didn't add more.
+- The Supabase migration cannot be verified from this machine; remind the user to
+  run `supabase/analytics.sql` in the SQL editor, otherwise every KPI is 0 and the
+  dashboard shows the "migration not run" banner.
+
+## Conventions to respect
+
+- No new npm dependencies. Styling uses CSS variables + the existing Tailwind
+  utilities + the `luxury-card` / `btn-gold` / `gold-divider` / `badge-pulse` classes
+  in `app/globals.css`.
+- Supabase clients: `lib/supabase/client.ts` (browser), `lib/supabase/server.ts`
+  (cookies, for API routes needing the user session), `lib/supabase/admin.ts`
+  (service-role, for admin-only reads/writes). The API route should use the
+  server client for auth + the admin client for the RPC/insert, mirroring `app/api/orders/route.ts`.
+- This is Next 16 — `cookies()` and route `params` are async/Promise-based
+  (see existing `app/api/**/route.ts` for the pattern to copy).
+- `crypto.randomUUID()` is available in all target browsers; keep the `Math.random`
+  fallback for safety.
+
+## File map
+
+```
+supabase/analytics.sql            NEW  (written, needs to run in Supabase)
+lib/analytics.ts                  NEW
+components/AnalyticsProvider.tsx  NEW
+components/AdminAnalytics.tsx     NEW
+app/api/analytics/route.ts        NEW
+lib/supabase/types.ts             EDIT
+app/admin/AdminClient.tsx         EDIT
+components/CartDrawer.tsx         EDIT
+app/cart/page.tsx                EDIT (+ placeholder-number fix)
+contexts/CartContext.tsx          EDIT
+app/layout.tsx                   EDIT (mount AnalyticsProvider)
+```
+
+## Archived Resume Prompt (Do Not Execute)
+
+```
+Resume the analytics-dashboard work in this Next.js 16 + Supabase repo
+(C:\Users\HomePC\Desktop\SwagOnCampus). Read HANDOFF.md first — it has the full
+plan, what's already done, and exactly what's left, in order:
+
+1. lib/analytics.ts        — client tracker (visitor id in localStorage + fire-and-forget POST /api/analytics, 30s throttle for checkout_start/add_to_cart)
+2. components/AnalyticsProvider.tsx — in app/layout.tsx: pageview on route change (skip /admin) + a capture-phase document click listener that records whatsapp_click for any <a href^="https://wa.me">
+3. app/api/analytics/route.ts — POST validates/ingests; GET is admin-only (user.email === NEXT_PUBLIC_ADMIN_EMAIL) and returns getAdminDb().rpc("analytics_summary")
+4. lib/supabase/types.ts    — add analytics_events table + AnalyticsSummary types
+5. components/AdminAnalytics.tsx — live dashboard (poll /api/analytics every 20s + Supabase Realtime postgres_changes on analytics_events; KPI cards, funnel, 24h CSS bar chart, top pages, live feed, "LIVE" badge via .badge-pulse, and a banner if the API 500s because the migration hasn't run)
+6. app/admin/AdminClient.tsx — add the Analytics tab (default), render <AdminAnalytics />
+7. Instrument: CartDrawer checkout_start (open with items), app/cart/page.tsx checkout_start (mount with items, throttled), CartContext.addToCart -> add_to_cart. ALSO fix the placeholder WhatsApp number in app/cart/page.tsx (2348000000000 -> 2348185319037).
+
+supabase/analytics.sql is already written and clean but NOT yet applied — tell
+the user to run it in Supabase > SQL Editor.
+
+Verify: npx tsc --noEmit, npm run build, npm run lint (no NEW errors; a known
+pre-existing react-hooks/set-state-in-effect in Navbar.tsx is fine to leave).
+No new npm packages. Follow AGENTS.md (Next 16, async cookies/params).
+```

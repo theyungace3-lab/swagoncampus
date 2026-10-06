@@ -27,8 +27,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<DbProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "";
-  const isAdmin    = !!user && user.email === adminEmail;
+  const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL?.trim().toLowerCase() ?? "";
+  const isAdmin    = !!adminEmail && !!user && user.email?.toLowerCase() === adminEmail;
 
   const fetchProfile = useCallback(async (userId: string) => {
     try {

@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useReducer, useEffect } from "react";
 import { CartItem, Product } from "@/lib/types";
+import { trackEvent } from "@/lib/analytics";
 
 interface CartState {
   items: CartItem[];
@@ -134,6 +135,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const addToCart = (product: Product, size: string, color: string) => {
     dispatch({ type: "ADD_ITEM", payload: { product, size, color } });
+    trackEvent("add_to_cart");
   };
 
   const removeFromCart = (productId: string, size: string, color: string) => {
@@ -180,4 +182,3 @@ export function useCart() {
   if (!ctx) throw new Error("useCart must be used within CartProvider");
   return ctx;
 }
-                                                      

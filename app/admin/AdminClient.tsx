@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import { CATEGORY_SECTIONS, formatPrice, normalizeCategory, getCategoryLabel } from "@/lib/products";
 import { Category } from "@/lib/types";
 import type { DbProduct, DbDiscount } from "@/lib/supabase/types";
+import { AdminAnalytics } from "@/components/AdminAnalytics";
 
 const SIZE_OPTIONS  = ["XS","S","M","L","XL","XXL","One Size","28","30","32","34","36","38","39","40","41","42","43","44"];
 const COLOR_OPTIONS = ["White","Black","Grey","Navy","Brown","Beige","Blue","Red","Green","Pink","Gold","Olive","Sage","Khaki"];
@@ -23,7 +24,7 @@ const EMPTY_FORM = {
   in_stock: true, featured: false,
 };
 
-type Tab = "products" | "discounts" | "orders";
+type Tab = "analytics" | "products" | "discounts" | "orders";
 
 export function AdminClient() {
   const { user, isAdmin, loading: authLoading, signOut } = useAuth();
@@ -36,7 +37,7 @@ export function AdminClient() {
     }
   }, [authLoading, user, isAdmin, router]);
 
-  const [tab, setTab]         = useState<Tab>("products");
+  const [tab, setTab]         = useState<Tab>("analytics");
   const [products, setProducts] = useState<DbProduct[]>([]);
   const [discounts, setDiscounts] = useState<DbDiscount[]>([]);
   const [statsLoading, setStatsLoading] = useState(true);
@@ -414,10 +415,10 @@ export function AdminClient() {
           <h1 className="text-3xl font-black gold-text">Admin Panel</h1>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={() => { loadProducts(); loadDiscounts(); }}
-            className="p-2 rounded-full hover:bg-[rgba(201,146,42,0.1)] transition-colors" style={{ color: "var(--text-muted)" }} aria-label="Refresh data">
+          {tab !== "analytics" && <button onClick={() => { loadProducts(); loadDiscounts(); }}
+            className="p-2 rounded-full hover:bg-[rgba(201,146,42,0.1)] transition-colors" style={{ color: "var(--text-muted)" }} aria-label="Refresh products and discounts">
             <RefreshCw className="w-4 h-4" />
-          </button>
+          </button>}
           <button onClick={async () => { await signOut(); router.push("/"); }}
             className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-full border hover:border-red-400 hover:text-red-500 transition-all" style={{ borderColor: "var(--border-color)", color: "var(--text-muted)" }}>
             <LogOut className="w-4 h-4" /> Sign Out
@@ -426,7 +427,7 @@ export function AdminClient() {
       </div>
 
       {/* Stats */}
-      {!statsLoading && (
+      {tab !== "analytics" && !statsLoading && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
           {[
             { icon: <Package className="w-5 h-5" />, label: "Products", value: products.length },
@@ -448,14 +449,17 @@ export function AdminClient() {
       <hr className="gold-divider mb-6" />
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-6">
-        {(["products", "discounts"] as Tab[]).map((t) => (
+      <div className="flex flex-wrap gap-2 mb-6" role="group" aria-label="Admin sections">
+        {(["analytics", "products", "discounts"] as Tab[]).map((t) => (
           <button key={t} onClick={() => setTab(t)}
-            className={`px-5 py-2 rounded-full text-sm font-bold capitalize transition-all ${tab === t ? "btn-gold" : "btn-ghost-gold"}`}>
-            {t === "discounts" ? "Sales & Discounts" : "Products"}
+            aria-pressed={tab === t}
+            className={`min-h-11 px-5 py-2 rounded-full text-sm font-bold capitalize transition-all ${tab === t ? "btn-gold" : "btn-ghost-gold"}`}>
+            {t === "analytics" ? "Analytics" : t === "discounts" ? "Sales & Discounts" : "Products"}
           </button>
         ))}
       </div>
+
+      {tab === "analytics" && <AdminAnalytics />}
 
       {/* ── PRODUCTS TAB ── */}
       {tab === "products" && (

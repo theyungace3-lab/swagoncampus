@@ -8,6 +8,7 @@ import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { useProducts } from "@/contexts/ProductsContext";
 import { useCart } from "@/contexts/CartContext";
 import { formatPrice, getCategoryLabel } from "@/lib/products";
+import { waOrderUrl } from "@/lib/whatsapp";
 import { Reveal } from "@/components/Reveal";
 
 export function ProductDetailClient({ id }: { id: string }) {
@@ -41,10 +42,9 @@ export function ProductDetailClient({ id }: { id: string }) {
   const chosenSize = selectedSize || product.sizes[0];
   const chosenColor = selectedColor || product.colors[0];
 
-  const whatsappMessage = encodeURIComponent(
+  const whatsappUrl = waOrderUrl(
     `Hello, I'd like to place an order for: *${product.name}* (Size: ${chosenSize}, Color: ${chosenColor}) (${formatPrice(product.price)})`
   );
-  const whatsappUrl = `https://wa.me/2348185319037?text=${whatsappMessage}`;
 
   function handleAddToCart() {
     addToCart(product!, chosenSize, chosenColor);
@@ -218,6 +218,7 @@ export function ProductDetailClient({ id }: { id: string }) {
 
             <a
               href={whatsappUrl}
+              data-analytics-checkout="true"
               target="_blank"
               rel="noopener noreferrer"
               className="flex-1 flex items-center justify-center gap-2 py-4 rounded-full font-bold text-sm transition-all duration-200 hover:scale-[1.02]"

@@ -6,6 +6,7 @@ import { Trash2, ShoppingBag, ArrowLeft } from "lucide-react";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { useCart } from "@/contexts/CartContext";
 import { formatPrice } from "@/lib/products";
+import { waOrderUrl, WA_ORDER_MESSAGE } from "@/lib/whatsapp";
 
 export default function CartPage() {
   const { state, removeFromCart, updateQuantity, clearCart, cartTotal } = useCart();
@@ -18,14 +19,13 @@ export default function CartPage() {
           item.product.price * item.quantity
         )}`
     )
-    .join("%0A");
+    .join("\n");
 
-  const whatsappMessage =
-    encodeURIComponent(`Hello, I'd like to place an order`) +
-    (items.length > 0
-      ? `:%0A%0A${whatsappLines}%0A%0A*Total: ${formatPrice(cartTotal)}*`
-      : "");
-  const whatsappUrl = `https://wa.me/2348000000000?text=${whatsappMessage}`;
+  const whatsappUrl = waOrderUrl(
+    items.length > 0
+      ? `${WA_ORDER_MESSAGE}:\n\n${whatsappLines}\n\n*Total: ${formatPrice(cartTotal)}*`
+      : WA_ORDER_MESSAGE
+  );
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -242,6 +242,7 @@ export default function CartPage() {
               {/* WhatsApp checkout */}
               <a
                 href={whatsappUrl}
+                data-analytics-checkout="true"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2 w-full py-4 rounded-full font-bold text-sm transition-all duration-200 hover:scale-[1.02] hover:shadow-lg mb-3"

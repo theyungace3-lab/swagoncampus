@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Crown, ShoppingBag } from "lucide-react";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
+import { waOrderUrl, WA_ORDER_MESSAGE } from "@/lib/whatsapp";
 
 export function HeroSection() {
   return (
@@ -72,7 +73,7 @@ export function HeroSection() {
               Shop Now
             </Link>
             <a
-              href="https://wa.me/2348185319037?text=Hello%2C%20I%27d%20like%20to%20place%20an%20order"
+              href={waOrderUrl(WA_ORDER_MESSAGE)}
               target="_blank"
               rel="noopener noreferrer"
               className="btn-ghost-gold inline-flex items-center gap-2 px-8 py-3.5 text-sm font-bold rounded-full"

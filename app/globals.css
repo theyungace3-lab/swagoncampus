@@ -406,3 +406,36 @@ option {
   background: var(--bg-card);
   color: var(--text-primary);
 }
+
+/* Keep live data still and controls visible to keyboard users. */
+.analytics-panel {
+  --analytics-positive: #047857;
+}
+
+.dark .analytics-panel {
+  --analytics-positive: #6ee7b7;
+}
+
+.analytics-panel .btn-ghost-gold {
+  color: var(--text-secondary);
+}
+
+.analytics-panel .btn-ghost-gold:hover {
+  color: var(--brown-deep);
+}
+
+.analytics-panel .luxury-card:hover {
+  transform: none;
+}
+
+.analytics-panel button:focus-visible,
+.analytics-panel summary:focus-visible {
+  outline: 2px solid var(--text-secondary);
+  outline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .analytics-panel .badge-pulse {
+    animation: none;
+  }
+}
