@@ -55,8 +55,9 @@ export function HeroSection() {
             className="animate-fade-in-up text-lg sm:text-xl leading-relaxed mb-8 max-w-xl"
             style={{ color: "var(--text-secondary)", animationDelay: "0.25s" }}
           >
-            Premium streetwear, trending fits and fresh campus styles, all
-            delivered to your hostel. Place your order directly on WhatsApp in
+            Welcome to Swag Headquarters, your plug for brand-new clean fits
+            and handpicked thrifted styles. Upgrade your wardrobe, step out in
+            style, and get your order delivered straight to your hostel in
             seconds.
           </p>
 
