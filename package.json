@@ -7,10 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test scripts/analytics.test.mjs scripts/vendor.test.mjs scripts/auth.test.mjs",
+    "test": "node --test scripts/analytics.test.mjs scripts/vendor.test.mjs scripts/auth.test.mjs scripts/orders.test.mjs",
     "test:analytics": "node --test scripts/analytics.test.mjs",
     "test:vendor": "node --test scripts/vendor.test.mjs",
     "test:auth": "node --test scripts/auth.test.mjs",
+    "test:orders": "node --test scripts/orders.test.mjs",
     "auth:config": "node scripts/configure-auth.mjs"
   },
   "dependencies": {

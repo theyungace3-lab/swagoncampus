@@ -4,13 +4,13 @@ import Image from "next/image";
 import { useState, useEffect, useCallback } from "react";
 import {
   Plus, Trash2, Edit2, Star, Package, ToggleLeft, ToggleRight, Check,
-  LogOut, Tag, RefreshCw, ShoppingBag, TrendingUp, Store, Users, ShieldCheck,
+  LogOut, Tag, RefreshCw, ShoppingBag, TrendingUp, Store, Users, ShieldCheck, Receipt, Search, Copy, Loader2,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { formatPrice, normalizeCategory, getCategoryLabel } from "@/lib/products";
 import type { Category } from "@/lib/types";
-import type { DbProduct, DbDiscount } from "@/lib/supabase/types";
+import type { DbProduct, DbDiscount, DbOrder, OrderItem } from "@/lib/supabase/types";
 import { AdminAnalytics } from "@/components/AdminAnalytics";
 import { ProductForm, EMPTY_PRODUCT_FORM, type ProductFormValues } from "@/components/ProductForm";
 
@@ -23,7 +23,7 @@ interface VendorRow {
   productCount: number;
 }
 
-type Tab = "analytics" | "products" | "vendors" | "discounts";
+type Tab = "analytics" | "orders" | "products" | "vendors" | "discounts";
 
 function toFormValues(p: DbProduct): ProductFormValues {
   return {
@@ -40,6 +40,12 @@ function toFormValues(p: DbProduct): ProductFormValues {
   };
 }
 
+function formatOrderDate(iso: string): string {
+  return new Date(iso).toLocaleString("en-NG", {
+    day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+  });
+}
+
 export function AdminClient() {
   const { user, isAdmin, loading: authLoading, signOut } = useAuth();
   const router = useRouter();
@@ -54,6 +60,12 @@ export function AdminClient() {
   const [products, setProducts] = useState<DbProduct[]>([]);
   const [discounts, setDiscounts] = useState<DbDiscount[]>([]);
   const [vendors, setVendors] = useState<VendorRow[]>([]);
+  const [orders, setOrders] = useState<DbOrder[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
+  const [orderQuery, setOrderQuery] = useState("");
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [markingPaid, setMarkingPaid] = useState<string | null>(null);
+  const [orderActionError, setOrderActionError] = useState("");
   const [statsLoading, setStatsLoading] = useState(true);
   const [vendorFilter, setVendorFilter] = useState<string>("all");
   const [vendorBusy, setVendorBusy] = useState<string | null>(null);
@@ -74,6 +86,12 @@ export function AdminClient() {
     if (res.ok) setProducts(await res.json());
   }, []);
 
+  const loadOrders = useCallback(async () => {
+    const res = await fetch("/api/orders");
+    if (res.ok) setOrders(await res.json());
+    setOrdersLoading(false);
+  }, []);
+
   const loadDiscounts = useCallback(async () => {
     const res = await fetch("/api/discounts?all=true");
     if (res.ok) setDiscounts(await res.json());
@@ -86,8 +104,17 @@ export function AdminClient() {
   }, []);
 
   useEffect(() => {
-    if (isAdmin) { loadProducts(); loadDiscounts(); loadVendors(); }
-  }, [isAdmin, loadProducts, loadDiscounts, loadVendors]);
+    if (!isAdmin) return;
+    let active = true;
+    void (async () => {
+      try {
+        await Promise.all([loadProducts(), loadDiscounts(), loadVendors(), loadOrders()]);
+      } finally {
+        if (active) setStatsLoading(false);
+      }
+    })();
+    return () => { active = false; };
+  }, [isAdmin, loadProducts, loadDiscounts, loadVendors, loadOrders]);
 
   if (authLoading || !user || !isAdmin) {
     return (
@@ -181,7 +208,6 @@ export function AdminClient() {
   }
 
   const activeDiscounts = discounts.filter((d) => d.active).length;
-  const inStockCount = products.filter((p) => p.in_stock).length;
   const visibleProducts = products.filter((p) =>
     vendorFilter === "all" ? true : vendorFilter === "mine" ? p.vendor_id === null : p.vendor_id === vendorFilter
   );
@@ -195,8 +221,8 @@ export function AdminClient() {
         </div>
         <div className="flex items-center gap-3">
           {tab !== "analytics" && (
-            <button onClick={() => { loadProducts(); loadDiscounts(); loadVendors(); }}
-              className="p-2 rounded-full hover:bg-[rgba(201,146,42,0.1)] transition-colors" style={{ color: "var(--text-muted)" }} aria-label="Refresh products and discounts">
+            <button onClick={() => { loadProducts(); loadDiscounts(); loadVendors(); loadOrders(); }}
+              className="p-2 rounded-full hover:bg-[rgba(201,146,42,0.1)] transition-colors" style={{ color: "var(--text-muted)" }} aria-label="Refresh products, orders and discounts">
               <RefreshCw className="w-4 h-4" />
             </button>
           )}
@@ -208,11 +234,12 @@ export function AdminClient() {
       </div>
 
       {tab !== "analytics" && !statsLoading && (
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-6 gap-4 mb-8">
           {[
             { icon: <Package className="w-5 h-5" />, label: "Products", value: products.length },
             { icon: <Store className="w-5 h-5" />, label: "Vendor Products", value: products.filter((p) => p.vendor_id).length },
-            { icon: <ShoppingBag className="w-5 h-5" />, label: "In Stock", value: inStockCount },
+            { icon: <ShoppingBag className="w-5 h-5" />, label: "In Stock", value: products.filter((p) => p.in_stock).length },
+            { icon: <Receipt className="w-5 h-5" />, label: "Pending Orders", value: orders.filter((o) => o.status === "pending").length },
             { icon: <Users className="w-5 h-5" />, label: "Vendors", value: vendors.filter((v) => v.role === "vendor").length },
             { icon: <Tag className="w-5 h-5" />, label: "Active Sales", value: activeDiscounts },
           ].map((s) => (
@@ -230,16 +257,174 @@ export function AdminClient() {
       <hr className="gold-divider mb-6" />
 
       <div className="flex flex-wrap gap-2 mb-6" role="group" aria-label="Admin sections">
-        {(["analytics", "products", "vendors", "discounts"] as Tab[]).map((t) => (
+        {(["analytics", "orders", "products", "vendors", "discounts"] as Tab[]).map((t) => (
           <button key={t} onClick={() => setTab(t)}
             aria-pressed={tab === t}
             className={`min-h-11 px-5 py-2 rounded-full text-sm font-bold capitalize transition-all ${tab === t ? "btn-gold" : "btn-ghost-gold"}`}>
-            {t === "analytics" ? "Analytics" : t === "discounts" ? "Sales & Discounts" : t === "vendors" ? "Vendors" : "Products"}
+            {t === "analytics" ? "Analytics" : t === "discounts" ? "Sales & Discounts" : t === "vendors" ? "Vendors" : t === "orders" ? "Orders" : "Products"}
           </button>
         ))}
       </div>
 
       {tab === "analytics" && <AdminAnalytics />}
+
+      {/* ── ORDERS TAB ── */}
+      {tab === "orders" && (() => {
+        const query = orderQuery.trim().toLowerCase();
+        const matches = orders.filter((o) =>
+          !query || (o.order_code ?? "").toLowerCase().includes(query) || o.id.toLowerCase() === query
+        );
+        const pending = matches.filter((o) => o.status === "pending");
+        const history = matches.filter((o) => o.status !== "pending");
+
+        async function markPaid(order: DbOrder) {
+          setMarkingPaid(order.id);
+          setOrderActionError("");
+          try {
+            const res = await fetch("/api/orders", {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ id: order.id, action: "mark_paid" }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || "Could not mark the order paid.");
+            await Promise.all([loadOrders(), loadProducts()]);
+          } catch (cause) {
+            setOrderActionError(cause instanceof Error ? cause.message : "Could not mark the order paid.");
+          } finally {
+            setMarkingPaid(null);
+          }
+        }
+
+        function copyCode(code: string) {
+          void navigator.clipboard?.writeText(code).then(() => {
+            setCopiedCode(code);
+            setTimeout(() => setCopiedCode((current) => (current === code ? null : current)), 1500);
+          });
+        }
+
+        function OrderCard({ order }: { order: DbOrder }) {
+          const isPending = order.status === "pending";
+          return (
+            <div className="luxury-card p-5 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="rounded-lg px-3 py-1 font-mono text-sm font-black gold-text" style={{ background: "rgba(201,146,42,0.1)" }}>
+                    {order.order_code}
+                  </span>
+                  <button onClick={() => copyCode(order.order_code)} className="p-1.5 rounded-lg hover:bg-[rgba(201,146,42,0.1)] transition-colors" style={{ color: "var(--text-muted)" }} aria-label={`Copy ${order.order_code}`}>
+                    {copiedCode === order.order_code ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  </button>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs" style={{ color: "var(--text-muted)" }}>{formatOrderDate(order.created_at)}</span>
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full capitalize"
+                    style={{ background: isPending ? "rgba(201,146,42,0.12)" : "rgba(34,197,94,0.12)", color: isPending ? "var(--gold-primary)" : "#22c55e" }}>
+                    {order.status}
+                  </span>
+                </div>
+              </div>
+
+              <ul className="space-y-2">
+                {order.items.map((item: OrderItem, index: number) => {
+                  const product = products.find((p) => p.id === item.product_id);
+                  return (
+                    <li key={`${order.id}-${index}`} className="flex flex-wrap items-center justify-between gap-2 text-sm border-b pb-2 last:border-b-0" style={{ borderColor: "var(--border-color)" }}>
+                      <span className="min-w-0" style={{ color: "var(--text-primary)" }}>
+                        <span className="font-semibold">{item.name}</span>
+                        <span className="text-xs" style={{ color: "var(--text-muted)" }}> ({item.size}, {item.color}) ×{item.quantity}</span>
+                      </span>
+                      <span className="flex items-center gap-3">
+                        <span className="text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap"
+                          style={{ background: product?.vendor_id ? "rgba(201,146,42,0.1)" : "rgba(34,197,94,0.1)", color: product?.vendor_id ? "var(--gold-primary)" : "#22c55e" }}>
+                          {vendorLabel(product?.vendor_id ?? null)}
+                        </span>
+                        <span className="font-bold gold-text">{formatPrice(Number(item.price) * item.quantity)}</span>
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <span className="font-bold" style={{ color: "var(--text-secondary)" }}>Total</span>
+                <span className="font-black gold-text text-lg">{formatPrice(order.total)}</span>
+              </div>
+
+              {isPending && (
+                <div className="flex flex-wrap items-center gap-3">
+                  <button onClick={() => void markPaid(order)} disabled={markingPaid === order.id}
+                    className="btn-gold flex items-center gap-2 px-5 py-2 rounded-full text-sm font-bold disabled:opacity-60">
+                    {markingPaid === order.id ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <Check className="w-4 h-4" />}
+                    {markingPaid === order.id ? "Marking paid..." : "Mark paid"}
+                  </button>
+                  <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+                    Marks it paid, removes it from pending, and takes the products out of stock.
+                  </span>
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        return (
+          <div className="space-y-8">
+            <div className="luxury-card p-5">
+              <label htmlFor="order-lookup" className="mb-2 block text-sm font-bold" style={{ color: "var(--text-primary)" }}>
+                Look up an Order ID
+              </label>
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="relative flex-1 min-w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "var(--text-muted)" }} aria-hidden="true" />
+                  <input id="order-lookup" type="text" value={orderQuery} onChange={(e) => setOrderQuery(e.target.value)}
+                    placeholder="Paste the Order ID from WhatsApp, e.g. SOC-K3M9Q2" spellCheck={false}
+                    className="admin-input pl-9" style={{ textTransform: "uppercase" }} />
+                </div>
+                {orderQuery && (
+                  <button onClick={() => setOrderQuery("")} className="text-xs font-semibold px-3 py-2 rounded-full border" style={{ borderColor: "var(--border-color)", color: "var(--text-muted)" }}>
+                    Clear
+                  </button>
+                )}
+              </div>
+              <p className="mt-2 text-xs" style={{ color: "var(--text-muted)" }}>
+                Orders load automatically below. Filter with any part of the Order ID to find the one the customer sent.
+              </p>
+            </div>
+
+            {orderActionError && (
+              <p role="alert" className="rounded-xl border px-4 py-3 text-sm" style={{ borderColor: "rgba(239,68,68,0.4)", color: "#ef4444" }}>
+                {orderActionError}
+              </p>
+            )}
+
+            <section>
+              <h2 className="text-lg font-black mb-4" style={{ color: "var(--text-primary)" }}>
+                Pending payment <span className="font-bold gold-text">({pending.length})</span>
+              </h2>
+              {ordersLoading ? (
+                <p className="text-sm" style={{ color: "var(--text-muted)" }}>Loading orders…</p>
+              ) : pending.length === 0 ? (
+                <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                  {query ? "No pending order matches that ID." : "No pending orders. Every paid order moves to the history below."}
+                </p>
+              ) : (
+                <div className="space-y-4">
+                  {pending.map((order) => <OrderCard key={order.id} order={order} />)}
+                </div>
+              )}
+            </section>
+
+            {history.length > 0 && (
+              <section>
+                <h2 className="text-lg font-black mb-4" style={{ color: "var(--text-primary)" }}>History</h2>
+                <div className="space-y-4">
+                  {history.map((order) => <OrderCard key={order.id} order={order} />)}
+                </div>
+              </section>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ── PRODUCTS TAB ── */}
       {tab === "products" && (
@@ -297,10 +482,15 @@ export function AdminClient() {
                       {p.vendor_id && <span className="block text-[10px]" style={{ color: "var(--text-muted)" }}>vendor {formatPrice(Number(p.vendor_price ?? 0))}</span>}
                     </td>
                     <td className="px-4 py-3">
-                      <button onClick={() => toggleStock(p)} className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: p.in_stock ? "#22c55e" : "#ef4444" }}>
-                        {p.in_stock ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
-                        {p.in_stock ? "In Stock" : "Out"}
-                      </button>
+                      <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: p.sold ? "var(--gold-primary)" : p.in_stock ? "#22c55e" : "#ef4444" }}>
+                        <button onClick={() => toggleStock(p)} className="flex items-center gap-1.5" style={{ color: p.in_stock ? "#22c55e" : "#ef4444" }} aria-label={`Toggle stock for ${p.name}`}>
+                          {p.in_stock ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
+                          {p.in_stock ? "In Stock" : "Out"}
+                        </button>
+                        {p.sold && !p.in_stock && (
+                          <span className="px-2 py-0.5 rounded-full whitespace-nowrap" style={{ background: "rgba(201,146,42,0.12)", color: "var(--gold-primary)" }}>Sold</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <button onClick={() => toggleFeatured(p)} className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: p.featured ? "var(--gold-primary)" : "var(--text-muted)" }}>

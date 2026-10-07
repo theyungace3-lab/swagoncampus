@@ -2,15 +2,19 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Trash2, ShoppingBag, ArrowLeft } from "lucide-react";
+import { useState } from "react";
+import { Trash2, ShoppingBag, ArrowLeft, Loader2 } from "lucide-react";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { useCart } from "@/contexts/CartContext";
 import { formatPrice } from "@/lib/products";
 import { waOrderUrl, WA_ORDER_MESSAGE } from "@/lib/whatsapp";
+import { createOrder, openWhatsApp, orderWhatsAppUrl, type OrderInput } from "@/lib/checkout";
 
 export default function CartPage() {
   const { state, removeFromCart, updateQuantity, clearCart, cartTotal } = useCart();
   const { items } = state;
+  const [checkoutBusy, setCheckoutBusy] = useState(false);
+  const [checkoutError, setCheckoutError] = useState("");
 
   const whatsappLines = items
     .map(
@@ -21,11 +25,38 @@ export default function CartPage() {
     )
     .join("\n");
 
+  // Fallback href if JS never runs; the real flow below creates the order
+  // first so the message always carries the Order ID.
   const whatsappUrl = waOrderUrl(
     items.length > 0
       ? `${WA_ORDER_MESSAGE}:\n\n${whatsappLines}\n\n*Total: ${formatPrice(cartTotal)}*`
       : WA_ORDER_MESSAGE
   );
+
+  async function handleCheckout(event: React.MouseEvent<HTMLAnchorElement>) {
+    event.preventDefault();
+    if (checkoutBusy || items.length === 0) return;
+    setCheckoutBusy(true);
+    setCheckoutError("");
+    try {
+      const order = await createOrder(
+        items.map(
+          (item): OrderInput => ({
+            product_id: item.product.id,
+            quantity: item.quantity,
+            size: item.selectedSize,
+            color: item.selectedColor,
+          })
+        )
+      );
+      clearCart();
+      openWhatsApp(orderWhatsAppUrl(order));
+    } catch (cause) {
+      setCheckoutError(cause instanceof Error ? cause.message : "Could not create the order. Try again.");
+    } finally {
+      setCheckoutBusy(false);
+    }
+  }
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -239,25 +270,33 @@ export default function CartPage() {
                 </span>
               </div>
 
-              {/* WhatsApp checkout */}
+              {/* WhatsApp checkout — creates the order (Order ID) first */}
               <a
                 href={whatsappUrl}
                 data-analytics-checkout="true"
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={handleCheckout}
+                aria-busy={checkoutBusy}
                 className="flex items-center justify-center gap-2 w-full py-4 rounded-full font-bold text-sm transition-all duration-200 hover:scale-[1.02] hover:shadow-lg mb-3"
-                style={{ background: "#25D366", color: "white" }}
+                style={{ background: "#25D366", color: "white", opacity: checkoutBusy ? 0.7 : 1 }}
               >
-                <WhatsAppIcon className="w-5 h-5" />
-                Order via WhatsApp
+                {checkoutBusy ? <Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" /> : <WhatsAppIcon className="w-5 h-5" />}
+                {checkoutBusy ? "Creating Order ID..." : "Order via WhatsApp"}
               </a>
+
+              {checkoutError && (
+                <p role="alert" className="mb-3 rounded-xl border px-3 py-2 text-center text-xs" style={{ borderColor: "rgba(239,68,68,0.4)", color: "#ef4444" }}>
+                  {checkoutError}
+                </p>
+              )}
 
               <p
                 className="text-center text-xs leading-relaxed"
                 style={{ color: "var(--text-muted)" }}
               >
-                Tap above to send your order directly to our WhatsApp. Delivery
-                within FUNAAB campus.
+                Tap above to send your order with its Order ID to our WhatsApp.
+                Delivery within FUNAAB campus.
               </p>
 
               {/* Continue shopping */}

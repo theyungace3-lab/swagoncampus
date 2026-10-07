@@ -3,12 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { ShoppingCart, ArrowLeft, Heart, Check } from "lucide-react";
+import { ShoppingCart, ArrowLeft, Heart, Check, Loader2 } from "lucide-react";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { useProducts } from "@/contexts/ProductsContext";
 import { useCart } from "@/contexts/CartContext";
 import { formatPrice, getCategoryLabel } from "@/lib/products";
 import { waOrderUrl } from "@/lib/whatsapp";
+import { createOrder, openWhatsApp, orderWhatsAppUrl } from "@/lib/checkout";
 import { Reveal } from "@/components/Reveal";
 
 export function ProductDetailClient({ id }: { id: string }) {
@@ -21,6 +22,8 @@ export function ProductDetailClient({ id }: { id: string }) {
   const [selectedColor, setSelectedColor] = useState<string>("");
   const [wished, setWished] = useState(false);
   const [addedFeedback, setAddedFeedback] = useState(false);
+  const [orderBusy, setOrderBusy] = useState(false);
+  const [orderError, setOrderError] = useState("");
 
   if (!product) {
     return (
@@ -45,6 +48,23 @@ export function ProductDetailClient({ id }: { id: string }) {
   const whatsappUrl = waOrderUrl(
     `Hello, I'd like to place an order for: *${product.name}* (Size: ${chosenSize}, Color: ${chosenColor}) (${formatPrice(product.price)})`
   );
+
+  async function handleWhatsAppOrder(event: React.MouseEvent<HTMLAnchorElement>) {
+    event.preventDefault();
+    if (orderBusy || !product!.inStock) return;
+    setOrderBusy(true);
+    setOrderError("");
+    try {
+      const order = await createOrder([
+        { product_id: product!.id, quantity: 1, size: chosenSize, color: chosenColor },
+      ]);
+      openWhatsApp(orderWhatsAppUrl(order));
+    } catch (cause) {
+      setOrderError(cause instanceof Error ? cause.message : "Could not create the order. Try again.");
+    } finally {
+      setOrderBusy(false);
+    }
+  }
 
   function handleAddToCart() {
     addToCart(product!, chosenSize, chosenColor);
@@ -221,13 +241,24 @@ export function ProductDetailClient({ id }: { id: string }) {
               data-analytics-checkout="true"
               target="_blank"
               rel="noopener noreferrer"
+              onClick={handleWhatsAppOrder}
+              aria-busy={orderBusy}
+              aria-disabled={!product.inStock}
               className="flex-1 flex items-center justify-center gap-2 py-4 rounded-full font-bold text-sm transition-all duration-200 hover:scale-[1.02]"
-              style={{ background: "#25D366", color: "white" }}
+              style={{
+                background: "#25D366",
+                color: "white",
+                opacity: !product.inStock ? 0.5 : orderBusy ? 0.7 : 1,
+              }}
             >
-              <WhatsAppIcon className="w-5 h-5" />
-              Order on WhatsApp
+              {orderBusy ? <Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" /> : <WhatsAppIcon className="w-5 h-5" />}
+              {orderBusy ? "Creating Order ID..." : "Order on WhatsApp"}
             </a>
           </div>
+
+          {orderError && (
+            <p role="alert" className="mt-3 text-center text-xs" style={{ color: "#ef4444" }}>{orderError}</p>
+          )}
 
           {/* In stock indicator */}
           <div className="mt-4 flex items-center gap-2 text-xs" style={{ color: "var(--text-muted)" }}>

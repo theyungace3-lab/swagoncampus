@@ -146,13 +146,17 @@ export function VendorClient() {
           Manage your own products. The store adds a {formatPrice(OWNER_MARKUP)} fee to your price — customers pay your price plus that fee.
           You only ever see and edit the products you upload.
         </p>
+        <p className="mt-3 text-sm font-semibold" style={{ color: "var(--gold-primary)" }}>
+          When a product is marked Sold, contact the admin to collect your payment.
+        </p>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
         {[
           { label: "Your products", value: products.length },
           { label: "In stock", value: inStock },
           { label: "Out of stock", value: products.length - inStock },
+          { label: "Sold", value: products.filter((p) => p.sold).length },
         ].map((s) => (
           <div key={s.label} className="luxury-card p-4">
             <p className="text-xl font-black" style={{ color: "var(--text-primary)" }}>{s.value}</p>
@@ -206,10 +210,21 @@ export function VendorClient() {
                   <td className="px-4 py-3"><span className="font-bold" style={{ color: "var(--text-primary)" }}>{formatPrice(Number(p.vendor_price ?? 0))}</span></td>
                   <td className="px-4 py-3"><span className="font-bold gold-text">{formatPrice(p.price)}</span></td>
                   <td className="px-4 py-3">
-                    <button onClick={() => toggleStock(p)} className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: p.in_stock ? "#22c55e" : "#ef4444" }}>
-                      {p.in_stock ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
-                      {p.in_stock ? "In Stock" : "Out"}
-                    </button>
+                    {p.sold && !p.in_stock ? (
+                      <span className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: "var(--gold-primary)" }}>
+                        <Check className="w-4 h-4" /> Sold — contact admin
+                      </span>
+                    ) : (
+                      <div className="flex items-center gap-1.5">
+                        <button onClick={() => toggleStock(p)} className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: p.in_stock ? "#22c55e" : "#ef4444" }}>
+                          {p.in_stock ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
+                          {p.in_stock ? "In Stock" : "Out"}
+                        </button>
+                        {p.sold && (
+                          <span className="px-2 py-0.5 rounded-full whitespace-nowrap" style={{ background: "rgba(201,146,42,0.12)", color: "var(--gold-primary)" }}>Sold</span>
+                        )}
+                      </div>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2">

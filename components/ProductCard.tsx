@@ -3,12 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { ShoppingCart, Heart } from "lucide-react";
+import { ShoppingCart, Heart, Loader2 } from "lucide-react";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { Product } from "@/lib/types";
 import { useCart } from "@/contexts/CartContext";
 import { formatPrice, getCategoryLabel } from "@/lib/products";
 import { waOrderUrl } from "@/lib/whatsapp";
+import { createOrder, openWhatsApp, orderWhatsAppUrl } from "@/lib/checkout";
 
 interface ProductCardProps {
   product: Product;
@@ -18,6 +19,8 @@ export function ProductCard({ product }: ProductCardProps) {
   const { addToCart } = useCart();
   const [wished, setWished] = useState(false);
   const [addedFeedback, setAddedFeedback] = useState(false);
+  const [orderBusy, setOrderBusy] = useState(false);
+  const [orderError, setOrderError] = useState("");
 
   const defaultSize = product.sizes[0] ?? "One Size";
   const defaultColor = product.colors[0] ?? "Default";
@@ -25,6 +28,24 @@ export function ProductCard({ product }: ProductCardProps) {
   const whatsappUrl = waOrderUrl(
     `Hello, I'd like to place an order for: *${product.name}* (${formatPrice(product.price)})`
   );
+
+  async function handleWhatsAppOrder(event: React.MouseEvent<HTMLAnchorElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (orderBusy || !product.inStock) return;
+    setOrderBusy(true);
+    setOrderError("");
+    try {
+      const order = await createOrder([
+        { product_id: product.id, quantity: 1, size: defaultSize, color: defaultColor },
+      ]);
+      openWhatsApp(orderWhatsAppUrl(order));
+    } catch (cause) {
+      setOrderError(cause instanceof Error ? cause.message : "Could not create the order. Try again.");
+    } finally {
+      setOrderBusy(false);
+    }
+  }
 
   function handleAddToCart(e: React.MouseEvent) {
     e.preventDefault();
@@ -143,14 +164,23 @@ export function ProductCard({ product }: ProductCardProps) {
             data-analytics-checkout="true"
             target="_blank"
             rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
+            onClick={handleWhatsAppOrder}
+            aria-busy={orderBusy}
+            aria-disabled={!product.inStock}
             className="flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 hover:scale-110 flex-shrink-0"
-            style={{ background: "#25D366", color: "white" }}
-            aria-label={`Order ${product.name} via WhatsApp`}
+            style={{
+              background: "#25D366",
+              color: "white",
+              opacity: !product.inStock ? 0.5 : orderBusy ? 0.7 : 1,
+            }}
+            aria-label={product.inStock ? `Order ${product.name} via WhatsApp` : `${product.name} is out of stock`}
           >
-            <WhatsAppIcon className="w-4 h-4" />
+            {orderBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <WhatsAppIcon className="w-4 h-4" />}
           </a>
         </div>
+        {orderError && (
+          <p role="alert" className="mt-2 text-[11px] text-red-500">{orderError}</p>
+        )}
       </div>
     </article>
   );

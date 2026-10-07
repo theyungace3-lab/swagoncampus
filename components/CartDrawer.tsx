@@ -2,15 +2,19 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { X, Trash2, ShoppingBag } from "lucide-react";
+import { useState } from "react";
+import { X, Trash2, ShoppingBag, Loader2 } from "lucide-react";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { useCart } from "@/contexts/CartContext";
 import { formatPrice } from "@/lib/products";
 import { waOrderUrl, WA_ORDER_MESSAGE } from "@/lib/whatsapp";
+import { createOrder, openWhatsApp, orderWhatsAppUrl, type OrderInput } from "@/lib/checkout";
 
 export function CartDrawer() {
-  const { state, removeFromCart, updateQuantity, closeCart, cartTotal } = useCart();
+  const { state, removeFromCart, updateQuantity, closeCart, clearCart, cartTotal } = useCart();
   const { items, isOpen } = state;
+  const [checkoutBusy, setCheckoutBusy] = useState(false);
+  const [checkoutError, setCheckoutError] = useState("");
 
   const whatsappLines = items
     .map(
@@ -21,11 +25,38 @@ export function CartDrawer() {
     )
     .join("\n");
 
+  // Fallback href only; the real click creates the order (Order ID) first.
   const whatsappUrl = waOrderUrl(
     items.length > 0
       ? `${WA_ORDER_MESSAGE}:\n\n${whatsappLines}\n\n*Total: ${formatPrice(cartTotal)}*`
       : WA_ORDER_MESSAGE
   );
+
+  async function handleCheckout(event: React.MouseEvent<HTMLAnchorElement>) {
+    event.preventDefault();
+    if (checkoutBusy || items.length === 0) return;
+    setCheckoutBusy(true);
+    setCheckoutError("");
+    try {
+      const order = await createOrder(
+        items.map(
+          (item): OrderInput => ({
+            product_id: item.product.id,
+            quantity: item.quantity,
+            size: item.selectedSize,
+            color: item.selectedColor,
+          })
+        )
+      );
+      clearCart();
+      closeCart();
+      openWhatsApp(orderWhatsAppUrl(order));
+    } catch (cause) {
+      setCheckoutError(cause instanceof Error ? cause.message : "Could not create the order. Try again.");
+    } finally {
+      setCheckoutBusy(false);
+    }
+  }
 
   return (
     <>
@@ -227,18 +258,25 @@ export function CartDrawer() {
               View Full Cart
             </Link>
 
-            {/* WhatsApp Checkout */}
+            {/* WhatsApp checkout — creates the order (Order ID) first */}
             <a
               href={whatsappUrl}
               data-analytics-checkout="true"
               target="_blank"
               rel="noopener noreferrer"
+              onClick={handleCheckout}
+              aria-busy={checkoutBusy}
               className="flex items-center justify-center gap-2 w-full py-3 rounded-full text-sm font-bold transition-all duration-200 hover:scale-[1.02]"
-              style={{ background: "#25D366", color: "white" }}
+              style={{ background: "#25D366", color: "white", opacity: checkoutBusy ? 0.7 : 1 }}
             >
-              <WhatsAppIcon className="w-4 h-4" />
-              Order via WhatsApp
+              {checkoutBusy ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <WhatsAppIcon className="w-4 h-4" />}
+              {checkoutBusy ? "Creating Order ID..." : "Order via WhatsApp"}
             </a>
+            {checkoutError && (
+              <p role="alert" className="rounded-xl border px-3 py-2 text-center text-xs" style={{ borderColor: "rgba(239,68,68,0.4)", color: "#ef4444" }}>
+                {checkoutError}
+              </p>
+            )}
           </div>
         )}
       </aside>

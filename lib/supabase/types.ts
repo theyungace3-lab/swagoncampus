@@ -13,6 +13,7 @@ export type Database = {
           sizes: string[];
           colors: string[];
           in_stock: boolean;
+          sold: boolean;
           featured: boolean;
           vendor_id: string | null;
           vendor_price: number | null;
@@ -22,12 +23,13 @@ export type Database = {
         };
         Insert: Omit<
           Database["public"]["Tables"]["products"]["Row"],
-          "id" | "created_at" | "updated_at" | "vendor_id" | "vendor_price" | "markup"
+          "id" | "created_at" | "updated_at" | "vendor_id" | "vendor_price" | "markup" | "sold"
         > & {
           id?: string;
           vendor_id?: string | null;
           vendor_price?: number | null;
           markup?: number;
+          sold?: boolean;
         };
         Update: Partial<Database["public"]["Tables"]["products"]["Insert"]>;
       };
@@ -62,13 +64,18 @@ export type Database = {
         Row: {
           id: string;
           user_id: string | null;
+          order_code: string;
           items: OrderItem[];
           total: number;
-          status: "pending" | "confirmed" | "delivered" | "cancelled";
+          status: "pending" | "confirmed" | "delivered" | "cancelled" | "paid";
           whatsapp_ref: string;
+          paid_at: string | null;
           created_at: string;
         };
-        Insert: Omit<Database["public"]["Tables"]["orders"]["Row"], "id" | "created_at"> & { id?: string };
+        Insert: Omit<
+          Database["public"]["Tables"]["orders"]["Row"],
+          "id" | "created_at" | "order_code" | "paid_at"
+        > & { id?: string; order_code?: string; paid_at?: string | null };
         Update: Partial<Database["public"]["Tables"]["orders"]["Insert"]>;
       };
       analytics_events: {
