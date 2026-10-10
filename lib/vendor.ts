@@ -7,7 +7,7 @@
  * manipulate it. Changing the constant affects future writes; existing
  * products keep the `markup` stored on their row.
  */
-export const OWNER_MARKUP = 200;
+export const OWNER_MARKUP = 100;
 
 export type Role = "customer" | "admin" | "vendor";
 

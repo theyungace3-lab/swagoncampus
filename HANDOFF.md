@@ -145,7 +145,7 @@ The store owner keeps a supreme panel; other sellers get a scoped vendor panel.
 - **Promotion**: the owner promotes an account to vendor from the new **Vendors**
   tab (`PATCH /api/admin/vendors`). The owner's own role can never be changed there.
 - **Pricing**: a vendor sets their own price; the customer-facing price is
-  `vendor_price + OWNER_MARKUP` (₦200). The server computes it (`lib/vendorProduct.ts`)
+  `vendor_price + OWNER_MARKUP` (₦100). The server computes it (`lib/vendorProduct.ts`)
   so a vendor cannot tamper with `price`, `markup`, `vendor_id`, or `featured`.
   Store-owned products have `vendor_id = null` and are never visible to vendors.
 - **Defence in depth**: authorization is enforced in the API routes (`lib/authz.ts`)
