@@ -12,7 +12,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
     colors: ["White", "Black", "Grey"],
     inStock: true,
     featured: true,
-    createdAt: new Date().toISOString(),
+    createdAt: "2026-02-11T10:00:00.000Z",
   },
   {
     id: "2",
@@ -25,7 +25,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
     colors: ["Blue", "Black", "Khaki"],
     inStock: true,
     featured: true,
-    createdAt: new Date().toISOString(),
+    createdAt: "2026-02-10T10:00:00.000Z",
   },
   {
     id: "3",
@@ -38,7 +38,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
     colors: ["Black", "Navy", "Brown"],
     inStock: true,
     featured: true,
-    createdAt: new Date().toISOString(),
+    createdAt: "2026-02-09T10:00:00.000Z",
   },
   {
     id: "4",
@@ -51,7 +51,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
     colors: ["Floral Red", "Floral Blue"],
     inStock: true,
     featured: true,
-    createdAt: new Date().toISOString(),
+    createdAt: "2026-02-08T10:00:00.000Z",
   },
   {
     id: "5",
@@ -64,7 +64,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
     colors: ["Black/Gold", "Navy/White"],
     inStock: true,
     featured: false,
-    createdAt: new Date().toISOString(),
+    createdAt: "2026-02-07T10:00:00.000Z",
   },
   {
     id: "6",
@@ -77,7 +77,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
     colors: ["White", "Triple Black"],
     inStock: true,
     featured: false,
-    createdAt: new Date().toISOString(),
+    createdAt: "2026-02-06T10:00:00.000Z",
   },
   {
     id: "7",
@@ -90,7 +90,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
     colors: ["Grey", "Black", "Olive"],
     inStock: true,
     featured: false,
-    createdAt: new Date().toISOString(),
+    createdAt: "2026-02-05T10:00:00.000Z",
   },
   {
     id: "8",
@@ -103,7 +103,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
     colors: ["Gold", "Silver"],
     inStock: true,
     featured: false,
-    createdAt: new Date().toISOString(),
+    createdAt: "2026-02-04T10:00:00.000Z",
   },
   {
     id: "9",
@@ -116,7 +116,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
     colors: ["White", "Black", "Beige"],
     inStock: true,
     featured: false,
-    createdAt: new Date().toISOString(),
+    createdAt: "2026-02-03T10:00:00.000Z",
   },
   {
     id: "10",
@@ -129,7 +129,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
     colors: ["Black", "Brown", "Sage"],
     inStock: true,
     featured: false,
-    createdAt: new Date().toISOString(),
+    createdAt: "2026-02-02T10:00:00.000Z",
   },
   {
     id: "11",
@@ -142,7 +142,7 @@ export const SAMPLE_PRODUCTS: Product[] = [
     colors: ["White", "Black", "Cream"],
     inStock: true,
     featured: false,
-    createdAt: new Date().toISOString(),
+    createdAt: "2026-02-01T10:00:00.000Z",
   },
 ];
 

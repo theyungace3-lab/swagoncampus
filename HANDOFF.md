@@ -8,6 +8,26 @@ The analytics implementation is complete, deployed to Vercel production, and
 active against the live Supabase project `wmgnwtyhqfazkdbzlewz`. The old plan
 below is archived and must not be followed as an outstanding implementation checklist.
 
+## Homepage Discovery (added 2026-10-11)
+
+The homepage lists products in two paged sections (`components/FeaturedProducts.tsx`):
+
+- **New Arrivals** — the newest products, capped at `NEW_ARRIVALS_LIMIT` (40).
+- **All Products** — the whole catalogue, however large it grows.
+
+Both open with `PAGE_SIZE` (8) cards and reveal the next 8 on each "See More"
+click; the button disappears once the section is fully shown. Each section pages
+independently and shows a "Showing X of Y" count.
+
+**Important (hydration):** `SAMPLE_PRODUCTS` in `lib/products.ts` used
+`createdAt: new Date().toISOString()` at module scope, so its timestamps differed
+between the server render and the browser. Once the homepage sorted by
+`createdAt`, that produced a React hydration text mismatch (#418) — and `/shop`
+was exposed to the same bug because it also sorts by date. The sample timestamps
+are now fixed ISO strings. **Keep any module-level product data deterministic**
+(no `new Date()`, `Date.now()`, or `Math.random()` in rendered fields), or
+rendered order will drift between server and client.
+
 ## Profile Role Lockdown (added 2026-10-06)
 
 **Action required:** run `supabase/harden-profiles.sql` once in the Supabase SQL

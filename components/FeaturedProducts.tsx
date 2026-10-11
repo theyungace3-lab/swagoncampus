@@ -1,17 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
-import { ArrowRight } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ArrowRight, ChevronDown } from "lucide-react";
 import { ProductCard } from "@/components/ProductCard";
 import { Reveal } from "@/components/Reveal";
 import { useProducts } from "@/contexts/ProductsContext";
 
-/**
- * How many of the newest products the "New Arrivals" strip shows.
- * Everything older still appears automatically in the All Products section
- * below it, so the page always surfaces the full catalogue.
- */
+/** How many products each "See More" click reveals. */
+const PAGE_SIZE = 8;
+
+/** The most a vendor/store owner can see in the New Arrivals section. */
 const NEW_ARRIVALS_LIMIT = 40;
 
 export function FeaturedProducts() {
@@ -31,6 +30,17 @@ export function FeaturedProducts() {
   const newArrivals = newestFirst.slice(0, NEW_ARRIVALS_LIMIT);
   const allProducts = newestFirst;
 
+  // Each section pages independently; both open with PAGE_SIZE items so the
+  // server and the first client render always agree.
+  const [newArrivalsShown, setNewArrivalsShown] = useState(PAGE_SIZE);
+  const [allShown, setAllShown] = useState(PAGE_SIZE);
+
+  const visibleNewArrivals = newArrivals.slice(0, newArrivalsShown);
+  const visibleAll = allProducts.slice(0, allShown);
+
+  const moreNewArrivals = visibleNewArrivals.length < newArrivals.length;
+  const moreAll = visibleAll.length < allProducts.length;
+
   return (
     <>
       {/* Featured */}
@@ -39,7 +49,7 @@ export function FeaturedProducts() {
           className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
           aria-labelledby="featured-heading"
         >
-          <div className="flex items-end justify-between mb-8">
+          <div className="flex items-end justify-between mb-8 gap-4">
             <div>
               <p
                 className="text-xs font-bold uppercase tracking-widest mb-2"
@@ -72,26 +82,17 @@ export function FeaturedProducts() {
               </Reveal>
             ))}
           </div>
-
-          <div className="sm:hidden mt-6 text-center">
-            <Link
-              href="/shop"
-              className="btn-ghost-gold inline-flex items-center gap-2 px-6 py-2.5 text-sm font-bold rounded-full"
-            >
-              View All <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
         </section>
       )}
 
-      {/* New Arrivals — the latest {NEW_ARRIVALS_LIMIT} products */}
+      {/* New Arrivals — the newest {NEW_ARRIVALS_LIMIT} products, {PAGE_SIZE} at a time */}
       {newArrivals.length > 0 && (
         <section
           className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
           aria-labelledby="new-arrivals-heading"
           style={{ background: "transparent" }}
         >
-          <div className="flex items-end justify-between mb-8">
+          <div className="flex items-end justify-between mb-8 gap-4">
             <div>
               <p
                 className="text-xs font-bold uppercase tracking-widest mb-2"
@@ -106,26 +107,32 @@ export function FeaturedProducts() {
               >
                 New Arrivals
               </h2>
-              <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
-                {newArrivals.length} of the newest drop
-                {newArrivals.length !== 1 ? "s" : ""}
+              <p
+                className="mt-2 text-sm"
+                style={{ color: "var(--text-muted)" }}
+                aria-live="polite"
+              >
+                Showing {visibleNewArrivals.length} of {newArrivals.length}
               </p>
             </div>
             <Link
               href="/shop"
               className="btn-ghost-gold hidden sm:inline-flex items-center gap-2 px-5 py-2 text-sm font-bold rounded-full"
             >
-              See More <ArrowRight className="w-4 h-4" />
+              View All <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
 
           <hr className="gold-divider mb-8" />
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-5">
-            {newArrivals.map((product, i) => (
+          <div
+            id="new-arrivals-grid"
+            className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-5"
+          >
+            {visibleNewArrivals.map((product, i) => (
               <Reveal
                 key={product.id}
-                delay={Math.min(i * 60, 480)}
+                delay={Math.min((i % PAGE_SIZE) * 60, 420)}
                 className="h-full"
               >
                 <ProductCard product={product} />
@@ -133,24 +140,32 @@ export function FeaturedProducts() {
             ))}
           </div>
 
-          <div className="sm:hidden mt-6 text-center">
-            <Link
-              href="/shop"
-              className="btn-ghost-gold inline-flex items-center gap-2 px-6 py-2.5 text-sm font-bold rounded-full"
-            >
-              See More <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
+          {moreNewArrivals && (
+            <div className="mt-10 text-center">
+              <button
+                type="button"
+                onClick={() =>
+                  setNewArrivalsShown((shown) =>
+                    Math.min(shown + PAGE_SIZE, newArrivals.length)
+                  )
+                }
+                aria-controls="new-arrivals-grid"
+                className="btn-ghost-gold inline-flex items-center gap-2 px-8 py-3 rounded-full text-sm font-bold"
+              >
+                See More <ChevronDown className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </section>
       )}
 
-      {/* All Products — every product in the catalogue, filled in automatically */}
+      {/* All Products — every product, {PAGE_SIZE} at a time */}
       {allProducts.length > 0 && (
         <section
           className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-20"
           aria-labelledby="all-products-heading"
         >
-          <div className="flex items-end justify-between mb-8">
+          <div className="flex items-end justify-between mb-8 gap-4">
             <div>
               <p
                 className="text-xs font-bold uppercase tracking-widest mb-2"
@@ -165,37 +180,49 @@ export function FeaturedProducts() {
               >
                 All Products
               </h2>
-              <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
-                {allProducts.length} item{allProducts.length !== 1 ? "s" : ""} in store
+              <p
+                className="mt-2 text-sm"
+                style={{ color: "var(--text-muted)" }}
+                aria-live="polite"
+              >
+                Showing {visibleAll.length} of {allProducts.length}
               </p>
             </div>
             <Link
               href="/shop"
               className="btn-ghost-gold hidden sm:inline-flex items-center gap-2 px-5 py-2 text-sm font-bold rounded-full"
             >
-              Filter & Sort <ArrowRight className="w-4 h-4" />
+              Filter &amp; Sort <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
 
           <hr className="gold-divider mb-8" />
 
-          {/* One observer for the whole grid — this list can grow unbounded. */}
-          <Reveal>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
-              {allProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          </Reveal>
-
-          <div className="sm:hidden mt-6 text-center">
-            <Link
-              href="/shop"
-              className="btn-ghost-gold inline-flex items-center gap-2 px-6 py-2.5 text-sm font-bold rounded-full"
-            >
-              Filter & Sort <ArrowRight className="w-4 h-4" />
-            </Link>
+          <div
+            id="all-products-grid"
+            className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5"
+          >
+            {visibleAll.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
           </div>
+
+          {moreAll && (
+            <div className="mt-10 text-center">
+              <button
+                type="button"
+                onClick={() =>
+                  setAllShown((shown) =>
+                    Math.min(shown + PAGE_SIZE, allProducts.length)
+                  )
+                }
+                aria-controls="all-products-grid"
+                className="btn-ghost-gold inline-flex items-center gap-2 px-8 py-3 rounded-full text-sm font-bold"
+              >
+                See More <ChevronDown className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </section>
       )}
     </>
