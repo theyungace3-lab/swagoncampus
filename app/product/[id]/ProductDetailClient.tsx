@@ -14,7 +14,7 @@ import { createOrder, openWhatsApp, orderWhatsAppUrl } from "@/lib/checkout";
 import { Reveal } from "@/components/Reveal";
 
 export function ProductDetailClient({ id }: { id: string }) {
-  const { products } = useProducts();
+  const { products, loading } = useProducts();
   const { addToCart } = useCart();
 
   const product = products.find((p) => p.id === id);
@@ -27,8 +27,31 @@ export function ProductDetailClient({ id }: { id: string }) {
   const [orderError, setOrderError] = useState("");
 
   if (!product) {
+    // Catalogue still loading — show a skeleton instead of flashing
+    // "Product not found" (or, worse, stale demo data).
+    if (loading) {
+      return (
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+            <div
+              className="rounded-2xl animate-pulse"
+              style={{ aspectRatio: "1", background: "rgba(201,146,42,0.08)" }}
+            />
+            <div className="space-y-4">
+              {[80, 60, 40, 100, 60].map((w, i) => (
+                <div
+                  key={i}
+                  className="h-5 rounded-full animate-pulse"
+                  style={{ width: `${w}%`, background: "rgba(201,146,42,0.1)" }}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
     return (
-      <div className="max-w-5xl mx-auto px-4 py-24 text-center">
+      <div className="max-w-5xl mx-auto py-24 px-4 text-center">
         <p className="text-6xl mb-4">🛍️</p>
         <h1
           className="text-2xl font-bold mb-3"

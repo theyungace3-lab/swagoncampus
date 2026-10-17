@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ArrowRight, ChevronDown } from "lucide-react";
 import { ProductCard } from "@/components/ProductCard";
+import { ProductGridSkeleton } from "@/components/ProductCardSkeleton";
 import { Reveal } from "@/components/Reveal";
 import { useProducts } from "@/contexts/ProductsContext";
 
@@ -14,7 +15,7 @@ const PAGE_SIZE = 8;
 const NEW_ARRIVALS_LIMIT = 40;
 
 export function FeaturedProducts() {
-  const { products } = useProducts();
+  const { products, loading } = useProducts();
 
   // Newest first. The API already sorts this way, but sorting here keeps the
   // 40-item rule correct no matter where the list came from (cache, fallback).
@@ -43,6 +44,35 @@ export function FeaturedProducts() {
 
   return (
     <>
+      {/* While the real catalogue loads, show skeletons — never demo products */}
+      {loading && products.length === 0 && (
+        <section
+          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-20"
+          aria-busy="true"
+          aria-label="Loading products"
+        >
+          <div className="mb-8">
+            <p
+              className="text-xs font-bold uppercase tracking-widest mb-2"
+              style={{ color: "var(--gold-primary)" }}
+            >
+              Just Dropped
+            </p>
+            <h2
+              className="text-3xl sm:text-4xl font-black"
+              style={{ color: "var(--text-primary)" }}
+            >
+              New Arrivals
+            </h2>
+            <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
+              Loading the latest drops…
+            </p>
+          </div>
+          <hr className="gold-divider mb-8" />
+          <ProductGridSkeleton />
+        </section>
+      )}
+
       {/* Featured */}
       {featured.length > 0 && (
         <section

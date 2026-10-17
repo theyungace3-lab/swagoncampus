@@ -2,17 +2,12 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { Product } from "@/lib/types";
-import { SAMPLE_PRODUCTS, normalizeCategory, sanitizeDisplayText } from "@/lib/products";
+import { normalizeCategory, sanitizeDisplayText } from "@/lib/products";
 
 interface ProductsContextValue {
   products: Product[];
   loading: boolean;
   refresh: () => Promise<void>;
-  // Legacy local helpers (used by admin via API now)
-  addProduct: (product: Omit<Product, "id" | "createdAt">) => void;
-  updateProduct: (id: string, product: Partial<Product>) => void;
-  deleteProduct: (id: string) => void;
-  resetToSample: () => void;
 }
 
 const ProductsContext = createContext<ProductsContextValue | null>(null);
@@ -39,8 +34,11 @@ function mapDbProduct(p: Record<string, unknown>): Product {
 }
 
 export function ProductsProvider({ children }: { children: React.ReactNode }) {
-  const [products, setProducts] = useState<Product[]>(SAMPLE_PRODUCTS);
-  const [loading,  setLoading]  = useState(false);
+  // Starts empty + loading: consumers render skeletons until the real
+  // catalogue arrives. Never seed demo products — the old sample catalogue
+  // must not flash on refresh.
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading,  setLoading]  = useState(true);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -50,30 +48,29 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
         const data = await res.json() as Record<string, unknown>[];
         setProducts(data.map(mapDbProduct));
       }
-      // If API fails (env not configured yet) keep SAMPLE_PRODUCTS
+      // On failure keep whatever we had (empty on first load) — showing a
+      // demo/empty catalogue is better than showing the wrong products.
     } catch {
-      // silently fall back to sample data
+      // keep previous products
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => { refresh(); }, [refresh]);
-
-  // ── Local fallback helpers (used before Supabase is configured) ──
-  function addProduct(product: Omit<Product, "id" | "createdAt">) {
-    setProducts((prev) => [{ ...product, id: Date.now().toString(), createdAt: new Date().toISOString() }, ...prev]);
-  }
-  function updateProduct(id: string, updates: Partial<Product>) {
-    setProducts((prev) => prev.map((p) => p.id === id ? { ...p, ...updates } : p));
-  }
-  function deleteProduct(id: string) {
-    setProducts((prev) => prev.filter((p) => p.id !== id));
-  }
-  function resetToSample() { setProducts(SAMPLE_PRODUCTS); }
+  useEffect(() => {
+    // Purge the legacy localStorage catalogue (v1/v2 demo-era caches) so old
+    // products can never surface again from a stale client cache.
+    try {
+      localStorage.removeItem("soc_products");
+      localStorage.removeItem("soc_products_v2");
+    } catch {
+      // ignore
+    }
+    refresh();
+  }, [refresh]);
 
   return (
-    <ProductsContext.Provider value={{ products, loading, refresh, addProduct, updateProduct, deleteProduct, resetToSample }}>
+    <ProductsContext.Provider value={{ products, loading, refresh }}>
       {children}
     </ProductsContext.Provider>
   );

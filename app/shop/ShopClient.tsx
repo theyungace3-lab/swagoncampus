@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { SlidersHorizontal, Search, X } from "lucide-react";
 import { ProductCard } from "@/components/ProductCard";
+import { ProductGridSkeleton } from "@/components/ProductCardSkeleton";
 import { Reveal } from "@/components/Reveal";
 import { useProducts } from "@/contexts/ProductsContext";
 import { CATEGORIES, CATEGORY_SECTIONS, getCategoryLabel, normalizeCategory } from "@/lib/products";
@@ -49,7 +50,7 @@ export function ShopClient() {
     router.replace("/shop", { scroll: false });
   }
 
-  const { products } = useProducts();
+  const { products, loading } = useProducts();
   const [sort, setSort] = useState("newest");
   const [showFilters, setShowFilters] = useState(false);
 
@@ -124,7 +125,7 @@ export function ShopClient() {
           {headingLabel}
         </h1>
         <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
-          {filtered.length} item{filtered.length !== 1 ? "s" : ""}
+          {loading ? "Loading…" : `${filtered.length} item${filtered.length !== 1 ? "s" : ""}`}
         </p>
         </div>
       </Reveal>
@@ -235,7 +236,9 @@ export function ShopClient() {
       </div>
 
       {/* Products Grid */}
-      {filtered.length === 0 ? (
+      {loading ? (
+        <ProductGridSkeleton className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5" />
+      ) : filtered.length === 0 ? (
         <div className="py-24 text-center">
           <p className="text-5xl mb-4">👗</p>
           <h2

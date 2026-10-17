@@ -19,14 +19,16 @@ Both open with `PAGE_SIZE` (8) cards and reveal the next 8 on each "See More"
 click; the button disappears once the section is fully shown. Each section pages
 independently and shows a "Showing X of Y" count.
 
-**Important (hydration):** `SAMPLE_PRODUCTS` in `lib/products.ts` used
-`createdAt: new Date().toISOString()` at module scope, so its timestamps differed
-between the server render and the browser. Once the homepage sorted by
-`createdAt`, that produced a React hydration text mismatch (#418) — and `/shop`
-was exposed to the same bug because it also sorts by date. The sample timestamps
-are now fixed ISO strings. **Keep any module-level product data deterministic**
-(no `new Date()`, `Date.now()`, or `Math.random()` in rendered fields), or
-rendered order will drift between server and client.
+**Important (hydration / no demo flash):** `SAMPLE_PRODUCTS`, the legacy
+`soc_products`/`soc_products_v2` localStorage helpers were deleted (2026-10-17)
+— the old demo catalogue was flashing on hard refresh before the real products
+loaded. `ProductsContext` now starts with `products: []` + `loading: true`, and
+consumers (`ShopClient`, `FeaturedProducts`, `ProductDetailClient`) render
+`ProductCardSkeleton` placeholders while loading. **Never seed module-level
+product data or fall back to demo products**, and keep any module-level product
+data that does exist deterministic (no `new Date()`, `Date.now()`, or
+`Math.random()` in rendered fields), or rendered order will drift between
+server and client.
 
 ## Profile Role Lockdown (added 2026-10-06)
 
