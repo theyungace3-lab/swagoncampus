@@ -24,7 +24,7 @@ function toFormValues(p: DbProduct): ProductFormValues {
     featured: false,
     price: 0,
     vendor_price: Number(p.vendor_price ?? 0),
-    condition: p.product_condition === "thrift" ? "thrift" : "new",
+    condition: p.product_condition === "thrift" ? "thrift" : p.product_condition === "new" ? "new" : "none",
   };
 }
 

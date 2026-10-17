@@ -1,6 +1,7 @@
 // Server-only helpers that turn a request body into a safe product write.
 // Vendors can never set their own vendor_id, price, markup, or featured flag.
 import { OWNER_MARKUP, storePrice } from "@/lib/vendor";
+import { getAdminDb } from "@/lib/supabase/admin";
 import type { Caller } from "@/lib/authz";
 import type { Database } from "@/lib/supabase/types";
 
@@ -21,10 +22,25 @@ function condition(value: unknown): ProductCondition | null {
   return value === "new" || value === "thrift" ? value : null;
 }
 
+/** The label the client is asking for ("new" | "thrift"), or null for
+ *  unlabeled / not provided. */
+export function requestedCondition(body: Record<string, unknown>): ProductCondition | null {
+  return condition(body.product_condition);
+}
+
 /** True when a write failed because the products.product_condition column is
  *  missing (supabase/product-condition.sql not run yet). */
 export function conditionColumnMissing(error: { code?: string; message?: string } | null | undefined): boolean {
   return error?.code === "42703" || /product_condition/i.test(error?.message ?? "");
+}
+
+/** Probes whether products.product_condition exists, so a write that carries
+ *  a label can fail loudly instead of saving the product and silently
+ *  dropping the label. */
+export async function conditionColumnStatus(): Promise<"ready" | "missing" | "error"> {
+  const { error } = await getAdminDb().from("products").select("product_condition").limit(1);
+  if (!error) return "ready";
+  return conditionColumnMissing(error) ? "missing" : "error";
 }
 
 function text(value: unknown): string {
@@ -45,8 +61,8 @@ export function validateProduct(body: Record<string, unknown>, isVendor: boolean
   if (!text(body.category).trim()) return "Category is required.";
   if (stringList(body.sizes).length === 0) return "Select at least one size.";
   if (stringList(body.colors).length === 0) return "Select at least one color.";
-  if ("product_condition" in body && body.product_condition !== undefined && condition(body.product_condition) === null) {
-    return "Condition must be 'new' or 'thrift'.";
+  if ("product_condition" in body && body.product_condition !== undefined && body.product_condition !== null && condition(body.product_condition) === null) {
+    return "Condition must be NEW, Thrift, or cleared.";
   }
   const price = isVendor ? numberOr(body.vendor_price, 0) : numberOr(body.price, 0);
   if (price <= 0) return isVendor ? "Your price must be greater than 0." : "Price must be greater than 0.";
@@ -60,8 +76,8 @@ export function validateProductPatch(body: Record<string, unknown>, isVendor: bo
   if ("category" in body && !text(body.category).trim()) return "Category cannot be empty.";
   if ("sizes" in body && stringList(body.sizes).length === 0) return "Select at least one size.";
   if ("colors" in body && stringList(body.colors).length === 0) return "Select at least one color.";
-  if ("product_condition" in body && body.product_condition !== undefined && condition(body.product_condition) === null) {
-    return "Condition must be 'new' or 'thrift'.";
+  if ("product_condition" in body && body.product_condition !== undefined && body.product_condition !== null && condition(body.product_condition) === null) {
+    return "Condition must be NEW, Thrift, or cleared.";
   }
   if (isVendor && "vendor_price" in body && numberOr(body.vendor_price, 0) <= 0) {
     return "Your price must be greater than 0.";
@@ -72,7 +88,9 @@ export function validateProductPatch(body: Record<string, unknown>, isVendor: bo
   return null;
 }
 
-/** Builds an insert row. Vendor identity, price and markup are set here only. */
+/** Builds an insert row. Vendor identity, price and markup are set here only.
+ *  The condition column is only included when a label is chosen, so products
+ *  stay unlabeled by default and saves work even before the migration runs. */
 export function buildProductInsert(caller: Caller, body: Record<string, unknown>): ProductInsert {
   const base = {
     name: text(body.name).trim(),
@@ -82,8 +100,8 @@ export function buildProductInsert(caller: Caller, body: Record<string, unknown>
     sizes: stringList(body.sizes),
     colors: stringList(body.colors),
     in_stock: body.in_stock === undefined ? true : Boolean(body.in_stock),
-    product_condition: condition(body.product_condition) ?? "new",
   };
+  const desired = condition(body.product_condition);
 
   if (caller.isVendor && caller.user) {
     const vendorPrice = numberOr(body.vendor_price, 0);
@@ -95,6 +113,7 @@ export function buildProductInsert(caller: Caller, body: Record<string, unknown>
       price: storePrice(vendorPrice),
       // Vendors cannot feature their own products; that is the owner's call.
       featured: false,
+      ...(desired ? { product_condition: desired } : {}),
     };
   }
 
@@ -104,6 +123,7 @@ export function buildProductInsert(caller: Caller, body: Record<string, unknown>
     ...base,
     price: numberOr(body.price, 0),
     featured: Boolean(body.featured),
+    ...(desired ? { product_condition: desired } : {}),
   };
 }
 
@@ -120,8 +140,9 @@ export function buildProductUpdate(caller: Caller, body: Record<string, unknown>
   if ("sizes" in body) patch.sizes = stringList(body.sizes);
   if ("colors" in body) patch.colors = stringList(body.colors);
   if ("in_stock" in body) patch.in_stock = Boolean(body.in_stock);
+  // null clears the label back to "unlabeled"; otherwise the chosen label.
   if ("product_condition" in body && body.product_condition !== undefined) {
-    patch.product_condition = condition(body.product_condition) ?? "new";
+    patch.product_condition = condition(body.product_condition);
   }
 
   if (caller.isVendor && caller.user) {

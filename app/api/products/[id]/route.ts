@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getAdminDb } from "@/lib/supabase/admin";
 import { getCaller } from "@/lib/authz";
-import { buildProductUpdate, validateProductPatch, conditionColumnMissing } from "@/lib/vendorProduct";
+import { buildProductUpdate, validateProductPatch, conditionColumnMissing, conditionColumnStatus } from "@/lib/vendorProduct";
 
 // GET /api/products/:id
 export async function GET(
@@ -56,6 +56,21 @@ export async function PATCH(
   // Partial updates only validate the fields being changed.
   const invalid = validateProductPatch(body, caller.isVendor);
   if (invalid) return NextResponse.json({ error: invalid }, { status: 400 });
+
+  // The label is being set or cleared: make sure the column exists first, so
+  // we never save the edit and silently drop the label.
+  if (body.product_condition !== undefined) {
+    const status = await conditionColumnStatus();
+    if (status === "missing") {
+      return NextResponse.json(
+        { error: "Run supabase/product-condition.sql in the Supabase SQL Editor to enable NEW / Thrift labels." },
+        { status: 503 }
+      );
+    }
+    if (status === "error") {
+      return NextResponse.json({ error: "Could not save the product. Try again." }, { status: 500 });
+    }
+  }
 
   // If the condition migration hasn't run yet, retry without the column so
   // edits keep working (the label simply won't persist until then).

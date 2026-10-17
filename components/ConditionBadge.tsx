@@ -1,12 +1,14 @@
 // Condition label shown everywhere a product appears so customers can
 // tell brand-new pieces ("NEW") from thrifted ones ("Thrift") at a glance.
+// Products without a label render nothing.
 export function ConditionBadge({
   condition,
   variant = "soft",
 }: {
-  condition?: "new" | "thrift";
+  condition?: "new" | "thrift" | null;
   variant?: "soft" | "solid";
 }) {
+  if (!condition) return null;
   const isThrift = condition === "thrift";
   const label = isThrift ? "Thrift" : "New";
 

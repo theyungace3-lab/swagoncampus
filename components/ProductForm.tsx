@@ -21,13 +21,13 @@ export interface ProductFormValues {
   featured: boolean;
   price: number;
   vendor_price: number;
-  condition: "new" | "thrift";
+  condition: "new" | "thrift" | "none";
 }
 
 export const EMPTY_PRODUCT_FORM: ProductFormValues = {
   name: "", description: "", category: "tops", image: "",
   sizes: [], colors: [], in_stock: true, featured: false, price: 0, vendor_price: 0,
-  condition: "new",
+  condition: "none",
 };
 
 /**
@@ -107,7 +107,7 @@ export function ProductForm({
       sizes: form.sizes,
       colors: form.colors,
       in_stock: form.in_stock,
-      condition: form.condition,
+      product_condition: form.condition === "none" ? null : form.condition,
     };
     const payload =
       pricingMode === "vendor"
@@ -154,13 +154,17 @@ export function ProductForm({
           </select>
         </Field>
 
-        <Field label="Condition" hint="Customers see this badge, so they always know if the piece is brand new or thrifted.">
+        <Field label="Condition" hint="Customers see this badge, so they always know if the piece is brand new or thrifted. Leave it on “No label” to show nothing.">
           <div className="flex flex-wrap gap-2">
-            {(["new", "thrift"] as const).map((c) => (
-              <button key={c} type="button" onClick={() => setForm((f) => ({ ...f, condition: c }))}
-                className={`px-6 py-2 rounded-full text-xs font-bold border transition-all ${form.condition === c ? "btn-gold border-transparent" : "btn-ghost-gold"}`}
-                aria-pressed={form.condition === c}>
-                {c === "new" ? "NEW" : "Thrift"}
+            {([
+              ["none", "No label"],
+              ["new", "NEW"],
+              ["thrift", "Thrift"],
+            ] as const).map(([value, label]) => (
+              <button key={value} type="button" onClick={() => setForm((f) => ({ ...f, condition: value }))}
+                className={`px-6 py-2 rounded-full text-xs font-bold border transition-all ${form.condition === value ? "btn-gold border-transparent" : "btn-ghost-gold"}`}
+                aria-pressed={form.condition === value}>
+                {label}
               </button>
             ))}
           </div>

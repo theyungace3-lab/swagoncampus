@@ -3,20 +3,29 @@
 --  Run in Supabase → SQL Editor → New query (after schema.sql).
 --  Safe to re-run.
 --
---  Adds products.product_condition: 'new' (default) or 'thrift'.
---  The storefront shows a NEW / THRIFT badge on every product so
---  customers never mistake a thrifted piece for a brand-new one.
---  Existing products default to 'new' and can be re-labelled from
---  the admin (or vendor) panel → Edit Product → Condition.
+--  products.product_condition is NULL (= unlabeled, no badge on the
+--  storefront) until the owner or a vendor picks a label per product
+--  from the panel: 'new' or 'thrift'.
+--
+--  If you ran the earlier version of this file (which made the column
+--  NOT NULL with default 'new'), this file undoes that and clears all
+--  labels back to "unlabeled", so every product starts without a badge.
 -- ═══════════════════════════════════════════════════════════
 begin;
 
 alter table public.products
-  add column if not exists product_condition text not null default 'new';
+  add column if not exists product_condition text;
+
+alter table public.products alter column product_condition drop not null;
+alter table public.products alter column product_condition drop default;
+
+update public.products
+   set product_condition = null
+ where product_condition is not null;
 
 alter table public.products drop constraint if exists products_condition_check;
 alter table public.products
   add constraint products_condition_check
-  check (product_condition in ('new', 'thrift'));
+  check (product_condition is null or product_condition in ('new', 'thrift'));
 
 commit;

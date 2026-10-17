@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getAdminDb } from "@/lib/supabase/admin";
 import { getCaller } from "@/lib/authz";
-import { buildProductInsert, validateProduct, conditionColumnMissing } from "@/lib/vendorProduct";
+import { buildProductInsert, validateProduct, conditionColumnMissing, conditionColumnStatus, requestedCondition } from "@/lib/vendorProduct";
 import { categoryDbValues, normalizeCategory } from "@/lib/products";
 import type { Category } from "@/lib/types";
 
@@ -45,6 +45,21 @@ export async function POST(request: NextRequest) {
 
   const invalid = validateProduct(body, caller.isVendor);
   if (invalid) return NextResponse.json({ error: invalid }, { status: 400 });
+
+  // A label is being set: make sure the column exists first, so we never save
+  // the product and silently drop the label.
+  if (requestedCondition(body) !== null) {
+    const status = await conditionColumnStatus();
+    if (status === "missing") {
+      return NextResponse.json(
+        { error: "Run supabase/product-condition.sql in the Supabase SQL Editor to enable NEW / Thrift labels." },
+        { status: 503 }
+      );
+    }
+    if (status === "error") {
+      return NextResponse.json({ error: "Could not save the product. Try again." }, { status: 500 });
+    }
+  }
 
   // If the condition migration hasn't run yet, retry without the column so
   // saves keep working (the label simply won't persist until then).

@@ -15,7 +15,7 @@ export type Database = {
           in_stock: boolean;
           sold: boolean;
           featured: boolean;
-          product_condition: "new" | "thrift";
+          product_condition: "new" | "thrift" | null;
           vendor_id: string | null;
           vendor_price: number | null;
           markup: number;
@@ -31,7 +31,7 @@ export type Database = {
           vendor_price?: number | null;
           markup?: number;
           sold?: boolean;
-          product_condition?: "new" | "thrift";
+          product_condition?: "new" | "thrift" | null;
         };
         Update: Partial<Database["public"]["Tables"]["products"]["Insert"]>;
       };
