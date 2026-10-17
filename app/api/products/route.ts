@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getAdminDb } from "@/lib/supabase/admin";
 import { getCaller } from "@/lib/authz";
-import { buildProductInsert, validateProduct } from "@/lib/vendorProduct";
+import { buildProductInsert, validateProduct, conditionColumnMissing } from "@/lib/vendorProduct";
 import { categoryDbValues, normalizeCategory } from "@/lib/products";
 import type { Category } from "@/lib/types";
 
@@ -46,12 +46,24 @@ export async function POST(request: NextRequest) {
   const invalid = validateProduct(body, caller.isVendor);
   if (invalid) return NextResponse.json({ error: invalid }, { status: 400 });
 
-  const { data, error } = await getAdminDb()
-    .from("products")
-    .insert(buildProductInsert(caller, body))
-    .select()
-    .single();
+  // If the condition migration hasn't run yet, retry without the column so
+  // saves keep working (the label simply won't persist until then).
+  const insert = buildProductInsert(caller, body);
+  let { data, error } = await getAdminDb().from("products").insert(insert).select().single();
+  if (error && conditionColumnMissing(error)) {
+    const fallback = { ...insert };
+    delete fallback.product_condition;
+    ({ data, error } = await getAdminDb().from("products").insert(fallback).select().single());
+  }
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    if (conditionColumnMissing(error)) {
+      return NextResponse.json(
+        { error: "Run supabase/product-condition.sql in the Supabase SQL Editor to enable NEW / Thrift labels." },
+        { status: 503 }
+      );
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
   return NextResponse.json(data, { status: 201 });
 }

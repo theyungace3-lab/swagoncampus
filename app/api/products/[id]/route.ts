@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getAdminDb } from "@/lib/supabase/admin";
 import { getCaller } from "@/lib/authz";
-import { buildProductUpdate, validateProductPatch } from "@/lib/vendorProduct";
+import { buildProductUpdate, validateProductPatch, conditionColumnMissing } from "@/lib/vendorProduct";
 
 // GET /api/products/:id
 export async function GET(
@@ -57,14 +57,25 @@ export async function PATCH(
   const invalid = validateProductPatch(body, caller.isVendor);
   if (invalid) return NextResponse.json({ error: invalid }, { status: 400 });
 
-  const { data, error } = await admin
-    .from("products")
-    .update(buildProductUpdate(caller, body, existing))
-    .eq("id", id)
-    .select()
-    .single();
+  // If the condition migration hasn't run yet, retry without the column so
+  // edits keep working (the label simply won't persist until then).
+  const patch = buildProductUpdate(caller, body, existing);
+  let { data, error } = await admin.from("products").update(patch).eq("id", id).select().single();
+  if (error && conditionColumnMissing(error)) {
+    const fallback = { ...patch };
+    delete fallback.product_condition;
+    ({ data, error } = await admin.from("products").update(fallback).eq("id", id).select().single());
+  }
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    if (conditionColumnMissing(error)) {
+      return NextResponse.json(
+        { error: "Run supabase/product-condition.sql in the Supabase SQL Editor to enable NEW / Thrift labels." },
+        { status: 503 }
+      );
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
   return NextResponse.json(data);
 }
 

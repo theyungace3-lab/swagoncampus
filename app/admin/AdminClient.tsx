@@ -12,6 +12,7 @@ import { formatPrice, normalizeCategory, getCategoryLabel } from "@/lib/products
 import type { Category } from "@/lib/types";
 import type { DbProduct, DbDiscount, DbOrder, OrderItem } from "@/lib/supabase/types";
 import { AdminAnalytics } from "@/components/AdminAnalytics";
+import { ConditionBadge } from "@/components/ConditionBadge";
 import { ProductForm, EMPTY_PRODUCT_FORM, type ProductFormValues } from "@/components/ProductForm";
 
 interface VendorRow {
@@ -37,6 +38,7 @@ function toFormValues(p: DbProduct): ProductFormValues {
     featured: p.featured,
     price: p.vendor_id ? Number(p.vendor_price ?? 0) : Number(p.price),
     vendor_price: Number(p.vendor_price ?? 0),
+    condition: p.product_condition === "thrift" ? "thrift" : "new",
   };
 }
 
@@ -65,6 +67,8 @@ export function AdminClient() {
   const [orderQuery, setOrderQuery] = useState("");
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [markingPaid, setMarkingPaid] = useState<string | null>(null);
+  const [deletingOrder, setDeletingOrder] = useState<string | null>(null);
+  const [deleteArmedOrder, setDeleteArmedOrder] = useState<string | null>(null);
   const [orderActionError, setOrderActionError] = useState("");
   const [statsLoading, setStatsLoading] = useState(true);
   const [vendorFilter, setVendorFilter] = useState<string>("all");
@@ -296,6 +300,31 @@ export function AdminClient() {
           }
         }
 
+        async function deleteOrder(order: DbOrder) {
+          if (deleteArmedOrder !== order.id) {
+            setDeleteArmedOrder(order.id);
+            setTimeout(() => setDeleteArmedOrder((current) => (current === order.id ? null : current)), 3000);
+            return;
+          }
+          setDeleteArmedOrder(null);
+          setDeletingOrder(order.id);
+          setOrderActionError("");
+          try {
+            const res = await fetch("/api/orders", {
+              method: "DELETE",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ id: order.id }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || "Could not delete the order.");
+            await loadOrders();
+          } catch (cause) {
+            setOrderActionError(cause instanceof Error ? cause.message : "Could not delete the order.");
+          } finally {
+            setDeletingOrder(null);
+          }
+        }
+
         function copyCode(code: string) {
           void navigator.clipboard?.writeText(code).then(() => {
             setCopiedCode(code);
@@ -353,13 +382,21 @@ export function AdminClient() {
 
               {isPending && (
                 <div className="flex flex-wrap items-center gap-3">
-                  <button onClick={() => void markPaid(order)} disabled={markingPaid === order.id}
+                  <button onClick={() => void markPaid(order)} disabled={markingPaid === order.id || deletingOrder === order.id}
                     className="btn-gold flex items-center gap-2 px-5 py-2 rounded-full text-sm font-bold disabled:opacity-60">
                     {markingPaid === order.id ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <Check className="w-4 h-4" />}
                     {markingPaid === order.id ? "Marking paid..." : "Mark paid"}
                   </button>
+                  <button onClick={() => void deleteOrder(order)} disabled={deletingOrder === order.id || markingPaid === order.id}
+                    className={`flex items-center gap-2 px-5 py-2 rounded-full text-sm font-bold border transition-all disabled:opacity-60 ${deleteArmedOrder === order.id ? "bg-red-500 text-white border-transparent" : "text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"}`}
+                    style={deleteArmedOrder === order.id ? undefined : { borderColor: "rgba(239,68,68,0.4)" }}
+                    aria-label={deleteArmedOrder === order.id ? `Confirm delete ${order.order_code}` : `Delete ${order.order_code}`}
+                    title={deleteArmedOrder === order.id ? "Click again to confirm" : "Delete this unpaid order"}>
+                    {deletingOrder === order.id ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <Trash2 className="w-4 h-4" />}
+                    {deletingOrder === order.id ? "Deleting..." : deleteArmedOrder === order.id ? "Confirm delete" : "Delete order"}
+                  </button>
                   <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-                    Marks it paid, removes it from pending, and takes the products out of stock.
+                    Mark paid when the customer has paid. Delete if they never paid — it disappears from the pending list.
                   </span>
                 </div>
               )}
@@ -452,7 +489,7 @@ export function AdminClient() {
             <table className="w-full text-sm" style={{ background: "var(--bg-card)" }}>
               <thead>
                 <tr style={{ borderBottom: "1px solid var(--border-color)", background: "rgba(201,146,42,0.05)" }}>
-                  {["Image", "Name", "Uploaded by", "Category", "Price", "Stock", "Featured", "Actions"].map((h) => (
+                  {["Image", "Name", "Uploaded by", "Category", "Condition", "Price", "Stock", "Featured", "Actions"].map((h) => (
                     <th key={h} className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>{h}</th>
                   ))}
                 </tr>
@@ -476,6 +513,9 @@ export function AdminClient() {
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap" style={{ background: "rgba(201,146,42,0.1)", color: "var(--gold-primary)" }}>{getCategoryLabel(p.category)}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <ConditionBadge condition={p.product_condition} />
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className="font-bold gold-text">{formatPrice(p.price)}</span>
@@ -508,7 +548,7 @@ export function AdminClient() {
                   </tr>
                 ))}
                 {visibleProducts.length === 0 && (
-                  <tr><td colSpan={8} className="px-4 py-8 text-center text-sm" style={{ color: "var(--text-muted)" }}>No products match this filter.</td></tr>
+                  <tr><td colSpan={9} className="px-4 py-8 text-center text-sm" style={{ color: "var(--text-muted)" }}>No products match this filter.</td></tr>
                 )}
               </tbody>
             </table>

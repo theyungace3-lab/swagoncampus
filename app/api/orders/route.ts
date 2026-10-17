@@ -274,3 +274,68 @@ export async function PATCH(request: NextRequest) {
 
   return NextResponse.json({ order: updated, alreadyPaid: false }, { headers: NO_STORE });
 }
+
+// DELETE /api/orders — owner only: remove an unpaid (pending) order from the
+// dashboard. Paid orders stay in history and can never be deleted here.
+export async function DELETE(request: NextRequest) {
+  const caller = await getCaller();
+  if (!caller.isOwner) {
+    return NextResponse.json({ error: "Owner access required" }, { status: 403, headers: NO_STORE });
+  }
+
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400, headers: NO_STORE });
+  }
+
+  const orderCode = typeof body.order_code === "string" ? body.order_code.trim().toUpperCase() : "";
+  const orderId = typeof body.id === "string" ? body.id : "";
+  if (orderCode) {
+    if (!ORDER_CODE_RE.test(orderCode)) return badRequest("Order ID must look like SOC-XXXXXX");
+  } else if (orderId) {
+    if (!UUID_RE.test(orderId)) return badRequest("Invalid order id");
+  } else {
+    return badRequest("Provide the order code or id");
+  }
+
+  const admin = getAdminDb();
+  let lookup = admin.from("orders").select("id, status");
+  lookup = orderCode ? lookup.eq("order_code", orderCode) : lookup.eq("id", orderId);
+  const { data: order, error: findError } = await lookup.maybeSingle();
+
+  if (findError && migrationMissing(findError)) {
+    return NextResponse.json(
+      { error: "Run supabase/orders.sql in the Supabase SQL Editor to enable order IDs." },
+      { status: 503, headers: NO_STORE }
+    );
+  }
+  if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404, headers: NO_STORE });
+  if (order.status !== "pending") {
+    return NextResponse.json(
+      { error: "Only unpaid orders can be deleted. Paid orders stay in history." },
+      { status: 409, headers: NO_STORE }
+    );
+  }
+
+  // Re-check status on the delete itself so an order that is marked paid in the
+  // same instant cannot disappear from history.
+  const { data: deleted, error: deleteError } = await admin
+    .from("orders")
+    .delete()
+    .eq("id", order.id)
+    .eq("status", "pending")
+    .select("id, order_code, status");
+  if (deleteError) {
+    return NextResponse.json({ error: "Could not delete the order. Try again." }, { status: 500, headers: NO_STORE });
+  }
+  if (!deleted || deleted.length === 0) {
+    return NextResponse.json(
+      { error: "That order was just paid or already removed. Refresh and try again." },
+      { status: 409, headers: NO_STORE }
+    );
+  }
+
+  return NextResponse.json({ deleted: deleted[0] }, { headers: NO_STORE });
+}

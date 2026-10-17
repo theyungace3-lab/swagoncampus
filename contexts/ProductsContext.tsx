@@ -30,6 +30,7 @@ function mapDbProduct(p: Record<string, unknown>): Product {
     colors:      Array.isArray(p.colors) ? (p.colors as string[]) : [],
     inStock:     Boolean(p.in_stock),
     featured:    Boolean(p.featured),
+    condition:   p.product_condition === "thrift" ? "thrift" : "new",
     createdAt:   String(p.created_at ?? new Date().toISOString()),
     // attach discount if present
     // @ts-expect-error – extended field

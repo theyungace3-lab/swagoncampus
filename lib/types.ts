@@ -9,6 +9,7 @@ export interface Product {
   colors: string[];
   inStock: boolean;
   featured?: boolean;
+  condition?: "new" | "thrift";
   createdAt: string;
 }
 
@@ -56,5 +57,6 @@ export interface AdminProduct {
   colors: string[];
   inStock: boolean;
   featured: boolean;
+  condition?: "new" | "thrift";
   createdAt: string;
 }

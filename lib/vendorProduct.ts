@@ -15,6 +15,18 @@ interface ProductRow {
 
 const COMMON_TEXT = ["name", "description", "category", "image"] as const;
 
+type ProductCondition = "new" | "thrift";
+
+function condition(value: unknown): ProductCondition | null {
+  return value === "new" || value === "thrift" ? value : null;
+}
+
+/** True when a write failed because the products.product_condition column is
+ *  missing (supabase/product-condition.sql not run yet). */
+export function conditionColumnMissing(error: { code?: string; message?: string } | null | undefined): boolean {
+  return error?.code === "42703" || /product_condition/i.test(error?.message ?? "");
+}
+
 function text(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
@@ -33,6 +45,9 @@ export function validateProduct(body: Record<string, unknown>, isVendor: boolean
   if (!text(body.category).trim()) return "Category is required.";
   if (stringList(body.sizes).length === 0) return "Select at least one size.";
   if (stringList(body.colors).length === 0) return "Select at least one color.";
+  if ("product_condition" in body && body.product_condition !== undefined && condition(body.product_condition) === null) {
+    return "Condition must be 'new' or 'thrift'.";
+  }
   const price = isVendor ? numberOr(body.vendor_price, 0) : numberOr(body.price, 0);
   if (price <= 0) return isVendor ? "Your price must be greater than 0." : "Price must be greater than 0.";
   return null;
@@ -45,6 +60,9 @@ export function validateProductPatch(body: Record<string, unknown>, isVendor: bo
   if ("category" in body && !text(body.category).trim()) return "Category cannot be empty.";
   if ("sizes" in body && stringList(body.sizes).length === 0) return "Select at least one size.";
   if ("colors" in body && stringList(body.colors).length === 0) return "Select at least one color.";
+  if ("product_condition" in body && body.product_condition !== undefined && condition(body.product_condition) === null) {
+    return "Condition must be 'new' or 'thrift'.";
+  }
   if (isVendor && "vendor_price" in body && numberOr(body.vendor_price, 0) <= 0) {
     return "Your price must be greater than 0.";
   }
@@ -64,6 +82,7 @@ export function buildProductInsert(caller: Caller, body: Record<string, unknown>
     sizes: stringList(body.sizes),
     colors: stringList(body.colors),
     in_stock: body.in_stock === undefined ? true : Boolean(body.in_stock),
+    product_condition: condition(body.product_condition) ?? "new",
   };
 
   if (caller.isVendor && caller.user) {
@@ -101,6 +120,9 @@ export function buildProductUpdate(caller: Caller, body: Record<string, unknown>
   if ("sizes" in body) patch.sizes = stringList(body.sizes);
   if ("colors" in body) patch.colors = stringList(body.colors);
   if ("in_stock" in body) patch.in_stock = Boolean(body.in_stock);
+  if ("product_condition" in body && body.product_condition !== undefined) {
+    patch.product_condition = condition(body.product_condition) ?? "new";
+  }
 
   if (caller.isVendor && caller.user) {
     const vendorPrice = "vendor_price" in body ? numberOr(body.vendor_price, 0) : existing.vendor_price ?? 0;

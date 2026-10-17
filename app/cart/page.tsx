@@ -7,6 +7,7 @@ import { Trash2, ShoppingBag, ArrowLeft, Loader2 } from "lucide-react";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { useCart } from "@/contexts/CartContext";
 import { formatPrice } from "@/lib/products";
+import { ConditionBadge } from "@/components/ConditionBadge";
 import { waOrderUrl, WA_ORDER_MESSAGE } from "@/lib/whatsapp";
 import { createOrder, openWhatsApp, orderWhatsAppUrl, type OrderInput } from "@/lib/checkout";
 
@@ -147,9 +148,10 @@ export default function CartPage() {
                         </h3>
                       </Link>
                       <p
-                        className="text-xs mt-0.5"
+                        className="text-xs mt-0.5 flex items-center gap-1.5"
                         style={{ color: "var(--text-muted)" }}
                       >
+                        <ConditionBadge condition={item.product.condition} />
                         Size: {item.selectedSize} · Color: {item.selectedColor}
                       </p>
                     </div>

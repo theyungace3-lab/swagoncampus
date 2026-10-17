@@ -8,6 +8,7 @@ import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { Product } from "@/lib/types";
 import { useCart } from "@/contexts/CartContext";
 import { formatPrice, getCategoryLabel } from "@/lib/products";
+import { ConditionBadge } from "@/components/ConditionBadge";
 import { waOrderUrl } from "@/lib/whatsapp";
 import { createOrder, openWhatsApp, orderWhatsAppUrl } from "@/lib/checkout";
 
@@ -80,7 +81,8 @@ export function ProductCard({ product }: ProductCardProps) {
         />
 
         {/* Badges */}
-        <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+        <div className="absolute top-3 left-3 flex flex-col items-start gap-1.5">
+          <ConditionBadge condition={product.condition} variant="solid" />
           {product.featured && (
             <span
               className="text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide"

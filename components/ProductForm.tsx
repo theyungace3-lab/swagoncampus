@@ -21,11 +21,13 @@ export interface ProductFormValues {
   featured: boolean;
   price: number;
   vendor_price: number;
+  condition: "new" | "thrift";
 }
 
 export const EMPTY_PRODUCT_FORM: ProductFormValues = {
   name: "", description: "", category: "tops", image: "",
   sizes: [], colors: [], in_stock: true, featured: false, price: 0, vendor_price: 0,
+  condition: "new",
 };
 
 /**
@@ -105,6 +107,7 @@ export function ProductForm({
       sizes: form.sizes,
       colors: form.colors,
       in_stock: form.in_stock,
+      condition: form.condition,
     };
     const payload =
       pricingMode === "vendor"
@@ -149,6 +152,18 @@ export function ProductForm({
               {CATEGORY_SECTIONS.women.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
             </optgroup>
           </select>
+        </Field>
+
+        <Field label="Condition" hint="Customers see this badge, so they always know if the piece is brand new or thrifted.">
+          <div className="flex flex-wrap gap-2">
+            {(["new", "thrift"] as const).map((c) => (
+              <button key={c} type="button" onClick={() => setForm((f) => ({ ...f, condition: c }))}
+                className={`px-6 py-2 rounded-full text-xs font-bold border transition-all ${form.condition === c ? "btn-gold border-transparent" : "btn-ghost-gold"}`}
+                aria-pressed={form.condition === c}>
+                {c === "new" ? "NEW" : "Thrift"}
+              </button>
+            ))}
+          </div>
         </Field>
 
         {pricingMode === "vendor" ? (

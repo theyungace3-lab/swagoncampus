@@ -10,6 +10,7 @@ import { OWNER_MARKUP } from "@/lib/vendor";
 import type { Category } from "@/lib/types";
 import type { DbProduct } from "@/lib/supabase/types";
 import { ProductForm, EMPTY_PRODUCT_FORM, type ProductFormValues } from "@/components/ProductForm";
+import { ConditionBadge } from "@/components/ConditionBadge";
 
 function toFormValues(p: DbProduct): ProductFormValues {
   return {
@@ -23,6 +24,7 @@ function toFormValues(p: DbProduct): ProductFormValues {
     featured: false,
     price: 0,
     vendor_price: Number(p.vendor_price ?? 0),
+    condition: p.product_condition === "thrift" ? "thrift" : "new",
   };
 }
 
@@ -187,7 +189,7 @@ export function VendorClient() {
           <table className="w-full text-sm" style={{ background: "var(--bg-card)" }}>
             <thead>
               <tr style={{ borderBottom: "1px solid var(--border-color)", background: "rgba(201,146,42,0.05)" }}>
-                {["Image", "Name", "Category", "Your price", "Customer pays", "Stock", "Actions"].map((h) => (
+                {["Image", "Name", "Category", "Condition", "Your price", "Customer pays", "Stock", "Actions"].map((h) => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>{h}</th>
                 ))}
               </tr>
@@ -206,6 +208,9 @@ export function VendorClient() {
                   </td>
                   <td className="px-4 py-3">
                     <span className="text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap" style={{ background: "rgba(201,146,42,0.1)", color: "var(--gold-primary)" }}>{getCategoryLabel(p.category)}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <ConditionBadge condition={p.product_condition} />
                   </td>
                   <td className="px-4 py-3"><span className="font-bold" style={{ color: "var(--text-primary)" }}>{formatPrice(Number(p.vendor_price ?? 0))}</span></td>
                   <td className="px-4 py-3"><span className="font-bold gold-text">{formatPrice(p.price)}</span></td>

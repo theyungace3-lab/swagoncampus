@@ -15,6 +15,7 @@ export type Database = {
           in_stock: boolean;
           sold: boolean;
           featured: boolean;
+          product_condition: "new" | "thrift";
           vendor_id: string | null;
           vendor_price: number | null;
           markup: number;
@@ -23,13 +24,14 @@ export type Database = {
         };
         Insert: Omit<
           Database["public"]["Tables"]["products"]["Row"],
-          "id" | "created_at" | "updated_at" | "vendor_id" | "vendor_price" | "markup" | "sold"
+          "id" | "created_at" | "updated_at" | "vendor_id" | "vendor_price" | "markup" | "sold" | "product_condition"
         > & {
           id?: string;
           vendor_id?: string | null;
           vendor_price?: number | null;
           markup?: number;
           sold?: boolean;
+          product_condition?: "new" | "thrift";
         };
         Update: Partial<Database["public"]["Tables"]["products"]["Insert"]>;
       };

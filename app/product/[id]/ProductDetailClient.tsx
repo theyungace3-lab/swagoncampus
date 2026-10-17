@@ -8,6 +8,7 @@ import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { useProducts } from "@/contexts/ProductsContext";
 import { useCart } from "@/contexts/CartContext";
 import { formatPrice, getCategoryLabel } from "@/lib/products";
+import { ConditionBadge } from "@/components/ConditionBadge";
 import { waOrderUrl } from "@/lib/whatsapp";
 import { createOrder, openWhatsApp, orderWhatsAppUrl } from "@/lib/checkout";
 import { Reveal } from "@/components/Reveal";
@@ -157,6 +158,14 @@ export function ProductDetailClient({ id }: { id: string }) {
           >
             {product.name}
           </h1>
+
+          {/* Condition */}
+          <div className="flex items-center gap-2 mb-4">
+            <ConditionBadge condition={product.condition} />
+            <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+              {product.condition === "thrift" ? "Handpicked second-hand piece — quality checked." : "Brand new, never worn."}
+            </span>
+          </div>
 
           {/* Price */}
           <p className="text-3xl font-black gold-text mb-4">

@@ -7,6 +7,7 @@ import { X, Trash2, ShoppingBag, Loader2 } from "lucide-react";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { useCart } from "@/contexts/CartContext";
 import { formatPrice } from "@/lib/products";
+import { ConditionBadge } from "@/components/ConditionBadge";
 import { waOrderUrl, WA_ORDER_MESSAGE } from "@/lib/whatsapp";
 import { createOrder, openWhatsApp, orderWhatsAppUrl, type OrderInput } from "@/lib/checkout";
 
@@ -164,7 +165,8 @@ export function CartDrawer() {
                   >
                     {item.product.name}
                   </p>
-                  <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
+                  <p className="text-xs mt-0.5 flex items-center gap-1.5" style={{ color: "var(--text-muted)" }}>
+                    <ConditionBadge condition={item.product.condition} />
                     {item.selectedSize} · {item.selectedColor}
                   </p>
                   <p className="text-sm font-bold mt-1 gold-text">
