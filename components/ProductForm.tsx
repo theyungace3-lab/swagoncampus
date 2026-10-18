@@ -35,6 +35,40 @@ export const EMPTY_PRODUCT_FORM: ProductFormValues = {
  * `pricingMode` decides whether the price field is the store price (owner
  * products) or the vendor's own price (markup is added by the server).
  */
+// Downscale big camera photos to ≤1600px (WebP when the browser can encode
+// it) before upload: products ship as small files — faster on campus mobile
+// data, less Supabase storage/bandwidth, and far less work for the Vercel
+// image optimizer later. Falls back to the original file on any failure
+// (e.g. HEIC on browsers that cannot decode it).
+async function compressForUpload(file: File): Promise<File> {
+  try {
+    if (!file.type.startsWith("image/")) return file;
+    const bitmap = await createImageBitmap(file);
+    try {
+      const maxSide = 1600;
+      const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+      if (scale === 1 && file.size <= 300 * 1024) return file;
+      const width = Math.max(1, Math.round(bitmap.width * scale));
+      const height = Math.max(1, Math.round(bitmap.height * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return file;
+      ctx.drawImage(bitmap, 0, 0, width, height);
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", 0.82));
+      if (!blob || blob.size >= file.size) return file;
+      const base = file.name.replace(/\.[^.]+$/, "") || "image";
+      const ext = (blob.type.split("/")[1] || "webp").replace("jpeg", "jpg");
+      return new File([blob], `${base}.${ext}`, { type: blob.type });
+    } finally {
+      bitmap.close();
+    }
+  } catch {
+    return file;
+  }
+}
+
 export function ProductForm({
   mode, title, initial, pricingMode, viewerIsVendor, showFeatured, onSubmit, onCancel,
 }: {
@@ -70,8 +104,9 @@ export function ProductForm({
     }
     setUploading(true);
     try {
+      const uploadFile = await compressForUpload(file);
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", uploadFile);
       const res = await fetch("/api/upload", { method: "POST", body: formData });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Upload failed");

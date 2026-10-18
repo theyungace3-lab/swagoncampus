@@ -86,7 +86,9 @@ export function AdminClient() {
   const [discError, setDiscError] = useState("");
 
   const loadProducts = useCallback(async () => {
-    const res = await fetch("/api/products");
+    // ?cb= bypasses the edge cache used for the public storefront list, so
+    // the panel always shows edits immediately.
+    const res = await fetch(`/api/products?cb=${Date.now()}`);
     if (res.ok) setProducts(await res.json());
   }, []);
 

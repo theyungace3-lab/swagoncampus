@@ -26,7 +26,16 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data ?? []);
+  return NextResponse.json(data ?? [], {
+    headers: {
+      // Public catalogue: let Vercel's edge cache answer repeat page loads so
+      // they don't each invoke this function. Cache keys include the query
+      // string, so ?category=… and ?featured=… cache separately, and the admin
+      // panel appends a ?cb= cache-buster whenever it needs a fresh list.
+      // Only safe because products are publicly readable (anon SELECT).
+      "Cache-Control": "public, max-age=0, s-maxage=30, stale-while-revalidate=60",
+    },
+  });
 }
 
 // POST /api/products — owner or vendor (vendors create their own products)

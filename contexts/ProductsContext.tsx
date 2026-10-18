@@ -43,7 +43,10 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/products", { cache: "no-store" });
+      // default cache mode lets the CDN serve the edge-cached catalogue
+      // (Cache-Control from the route) instead of invoking the function on
+      // every page load; the response itself is max-age=0 so browsers revalidate.
+      const res = await fetch("/api/products");
       if (res.ok) {
         const data = await res.json() as Record<string, unknown>[];
         setProducts(data.map(mapDbProduct));

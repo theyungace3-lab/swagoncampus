@@ -94,7 +94,7 @@ export function AdminAnalytics() {
     }
 
     // Coalesce bursts and cap realtime-driven refetches so high-volume inserts
-    // (pageviews, heartbeats) cannot turn the 20s backup poll into a 1 Hz loop.
+    // (pageviews, heartbeats) cannot turn the 60s backup poll into a 1 Hz loop.
     const REALTIME_MIN_GAP_MS = 10_000;
     function scheduleRefresh(payload?: unknown) {
       if ((payload as { new?: { type?: string } } | undefined)?.new?.type === "heartbeat") return;
@@ -113,7 +113,9 @@ export function AdminAnalytics() {
     }
 
     void refresh();
-    const poll = setInterval(onVisible, 20_000);
+    // Realtime pushes instant updates; this poll is only the fallback, and a
+    // heavy summary query every 20s added up against the free function quota.
+    const poll = setInterval(onVisible, 60_000);
     document.addEventListener("visibilitychange", onVisible);
 
     const supabase = createClient();
