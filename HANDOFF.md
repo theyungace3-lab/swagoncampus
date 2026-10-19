@@ -195,7 +195,7 @@ the Vendors tab and `/vendor` do nothing useful.
 ### Completed
 
 - Analytics is the default admin tab; Products and Sales & Discounts remain intact.
-- The local admin email is now `theyungace3@gmail.com`.
+- The local admin email is now set to the owner's inbox (`NEXT_PUBLIC_ADMIN_EMAIL`).
 - Dashboard metrics include active visitors, today's and total visitors, registered
   accounts, unique checkout visitors, checkout clicks, WhatsApp clicks, pageviews,
   add-to-cart actions, and recorded database orders.
@@ -254,7 +254,7 @@ it, but the query and policy improvements require it. It is idempotent.
 - `supabase/analytics.sql` was executed in the live project's SQL Editor
   ("Success. No rows returned").
 - Production env: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and
-  `NEXT_PUBLIC_ADMIN_EMAIL=theyungace3@gmail.com` were already correct.
+  `NEXT_PUBLIC_ADMIN_EMAIL` (the owner's inbox) were already correct.
   `SUPABASE_SERVICE_ROLE_KEY` was an 11-character placeholder and was replaced with
   the real `service_role` key for this project (stored as a Sensitive variable).
 - Live checks: the table and `analytics_summary` RPC respond to the service role
@@ -267,7 +267,7 @@ it, but the query and policy improvements require it. It is idempotent.
 
 - Re-run `supabase/analytics.sql` in the Supabase SQL Editor (see Post-Review Fixes),
   then rebuild/redeploy so the live app uses the updated summary function and policies.
-- Sign in as `theyungace3@gmail.com`, open `/admin`, and browse the storefront in a
+- Sign in as the admin email, open `/admin`, and browse the storefront in a
   separate browser/incognito window to see live activity appear.
 
 ### Verification
@@ -304,8 +304,7 @@ It is not the current implementation or a list of remaining tasks.
 
 ### Original Goal
 
-The admin panel (signed in as the admin email, currently `theyungace3@gmail.com`
-via `NEXT_PUBLIC_ADMIN_EMAIL`) needs a **real-time analytics dashboard**
+The admin panel (signed in as the admin email, via `NEXT_PUBLIC_ADMIN_EMAIL`) needs a **real-time analytics dashboard**
 showing, at minimum:
 
 - number of visitors on the site (total / today / live now)

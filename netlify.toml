@@ -1,0 +1,9 @@
+# Netlify build configuration.
+#
+# Secrets scanning: NEXT_PUBLIC_* values are compiled into the public browser
+# bundle by design (supabase project URL + anon key + the admin inbox), so they
+# are not secrets and must not fail the build when detected in the output.
+# Every other credential (service role key, Gmail app password, OAuth secret)
+# stays server-side and is never whitelisted here.
+[build.environment]
+  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,NEXT_PUBLIC_ADMIN_EMAIL"

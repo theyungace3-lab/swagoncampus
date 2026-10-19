@@ -33,7 +33,7 @@ Open `.env.local` and fill in your real values:
 NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
-NEXT_PUBLIC_ADMIN_EMAIL=theyungace3@gmail.com
+NEXT_PUBLIC_ADMIN_EMAIL=you@example.com
 ```
 
 Get these from: **Supabase → Settings → API**
