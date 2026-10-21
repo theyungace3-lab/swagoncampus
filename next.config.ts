@@ -27,7 +27,7 @@ const nextConfig: NextConfig = {
     // the optimizer, and every browser in use on campus decodes WebP fine.
     formats: ["image/webp"],
     // Fewer generated widths per image → fewer variants to encode and cache.
-    deviceSizes: [640, 828, 1080, 1200, 1920],
+    deviceSizes: [640, 828, 1080, 1200],
     imageSizes: [160, 320, 480, 640, 768],
   },
 };

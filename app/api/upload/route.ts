@@ -38,7 +38,16 @@ export async function POST(request: NextRequest) {
   const admin = getAdminDb();
   const { error } = await admin.storage
     .from(BUCKET)
-    .upload(safeName, file, { contentType: file.type, upsert: false });
+    // Supabase prefixes "public, " to this value, so it must already be a valid
+    // directive list. Filenames are unique per upload (immutable URLs), and a
+    // long TTL lets image CDNs cache transformed variants instead of
+    // re-downloading and re-encoding the original on every request (this is
+    // what burned the Vercel/Netlify free tiers).
+    .upload(safeName, file, {
+      contentType: file.type,
+      cacheControl: "max-age=31536000, immutable",
+      upsert: false,
+    });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

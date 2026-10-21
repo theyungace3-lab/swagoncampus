@@ -39,7 +39,7 @@ export function trackEvent(type: AnalyticsEvent, path?: string): void {
     // Throttle presence only. Every real add-to-cart or button click is counted.
     if (type === "heartbeat") {
       const now = Date.now();
-      if (lastHeartbeat !== undefined && now - lastHeartbeat < 60_000) return;
+      if (lastHeartbeat !== undefined && now - lastHeartbeat < 180_000) return;
       lastHeartbeat = now;
     }
 

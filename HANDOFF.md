@@ -30,6 +30,15 @@ data that does exist deterministic (no `new Date()`, `Date.now()`, or
 `Math.random()` in rendered fields), or rendered order will drift between
 server and client.
 
+**Important (image caching / hosting cost):** `/api/upload` must keep
+`cacheControl: "max-age=31536000, immutable"`. Supabase prefixes `public, ` to
+that value, so a bare number like `"31536000"` produces the invalid header
+`public, 31536000` which CDNs ignore — every image request then re-downloads and
+re-encodes the original, which exhausted the Vercel free tier (and Netlify
+credits). `scripts/backfill-image-cache.mjs` re-applies valid headers to
+existing storage objects (run once per bucket; safe to re-run). Never serve
+product images without a valid cache header.
+
 ## Profile Role Lockdown (added 2026-10-06)
 
 **Action required:** run `supabase/harden-profiles.sql` once in the Supabase SQL

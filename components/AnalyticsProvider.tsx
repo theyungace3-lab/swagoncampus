@@ -27,9 +27,12 @@ export function AnalyticsProvider({ children }: { children: ReactNode }) {
     }
 
     onVisible();
+    // The analytics "live now" window is 5 minutes, so a heartbeat every 4
+    // minutes keeps active visitors counted while cutting analytics function
+    // calls (and hosting credits) by 4x versus the old 60s interval.
     const heartbeat = window.setInterval(() => {
       if (document.visibilityState === "visible") trackEvent("heartbeat", pathname);
-    }, 60_000);
+    }, 240_000);
     document.addEventListener("visibilitychange", onVisible);
     return () => {
       window.clearInterval(heartbeat);
