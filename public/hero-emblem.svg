@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000" viewBox="0 0 1000 1000" fill="none">
+  <!-- Vector rendition of the supplied large emblem, without its canvas or wordmark. -->
+  <defs>
+    <linearGradient id="rim" x1="80" y1="40" x2="930" y2="980" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ecd07d"/>
+      <stop offset=".46" stop-color="#d6ac45"/>
+      <stop offset="1" stop-color="#997219"/>
+    </linearGradient>
+    <linearGradient id="bevel" x1="60" y1="30" x2="900" y2="1000" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fae3a0"/>
+      <stop offset=".48" stop-color="#efd07b"/>
+      <stop offset="1" stop-color="#c3a254"/>
+    </linearGradient>
+    <linearGradient id="face" x1="90" y1="110" x2="945" y2="925" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f2d384"/>
+      <stop offset=".45" stop-color="#e6b748"/>
+      <stop offset=".76" stop-color="#bd912f"/>
+      <stop offset="1" stop-color="#9e761c"/>
+    </linearGradient>
+    <linearGradient id="letter-face" x1="435" y1="510" x2="568" y2="694" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f7dc8d"/>
+      <stop offset=".46" stop-color="#e8be58"/>
+      <stop offset="1" stop-color="#b68c26"/>
+    </linearGradient>
+    <linearGradient id="letter-bevel" x1="470" y1="505" x2="532" y2="697" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffe6a3"/>
+      <stop offset=".5" stop-color="#d3ad53"/>
+      <stop offset="1" stop-color="#806019"/>
+    </linearGradient>
+    <filter id="letter-shadow" x="395" y="490" width="205" height="224" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="1.5" dy="3.5" stdDeviation="2" flood-color="#090500" flood-opacity=".45"/>
+    </filter>
+    <path id="letter" d="M577 558C571 524 544 505 497 505C449 505 418 526 418 558C418 588 439 605 480 616L501 622C517 626 526 633 526 642C526 654 515 662 496 662C478 662 467 652 465 632L412 636C417 675 447 696 497 696C550 696 582 674 582 637C582 607 564 590 522 579L493 571C479 567 471 562 471 553C471 543 480 537 495 537C511 537 521 545 523 562L577 558Z"/>
+  </defs>
+  <rect x="3" y="3" width="994" height="994" rx="260" fill="url(#rim)"/>
+  <rect x="14" y="14" width="972" height="972" rx="249" fill="url(#bevel)" stroke="#fff0b7" stroke-opacity=".22" stroke-width="2"/>
+  <rect x="36" y="36" width="928" height="928" rx="227" fill="url(#face)"/>
+  <path fill="#1d1000" fill-rule="evenodd" d="M354 414V359C354 278 418 212 497 212C577 212 641 278 641 359V414H723L770 767C777 812 751 846 706 846H294C249 846 218 813 225 769L272 414H354ZM408 414H587V359C587 307 547 265 497 265C447 265 408 307 408 359V414Z" clip-rule="evenodd"/>
+  <g filter="url(#letter-shadow)">
+    <use href="#letter" transform="translate(1.5 3)" fill="#805b17"/>
+    <use href="#letter" fill="url(#letter-face)" stroke="url(#letter-bevel)" stroke-width="4" stroke-linejoin="round"/>
+  </g>
+</svg>
